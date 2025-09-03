@@ -1,6 +1,6 @@
 module github.com/kerlexov/mcp-logging-server
 
-go 1.23
+go 1.23.0
 
 require (
 	github.com/blevesearch/bleve/v2 v2.5.3
@@ -8,6 +8,7 @@ require (
 	github.com/go-playground/validator/v10 v10.16.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-sqlite3 v1.14.18
+	golang.org/x/time v0.12.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
