@@ -268,7 +268,7 @@ const BrowserFeaturesDemo: React.FC = () => {
 // Root component
 const BrowserFeaturesRoot: React.FC = () => {
   const config = {
-    serverUrl: 'http://localhost:8080',
+    serverUrl: 'http://localhost:9080',
     serviceName: 'browser-features-demo',
     agentId: 'browser-demo-001',
     bufferSize: 3, // Small buffer for frequent flushes

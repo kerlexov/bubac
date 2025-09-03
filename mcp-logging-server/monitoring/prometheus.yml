@@ -10,7 +10,7 @@ scrape_configs:
   # MCP Logging Server
   - job_name: 'mcp-logging-server'
     static_configs:
-      - targets: ['mcp-logging-server:8080']
+      - targets: ['mcp-logging-server:9080']
     scrape_interval: 5s
     metrics_path: '/metrics'
     params:

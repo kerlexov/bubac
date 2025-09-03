@@ -29,7 +29,7 @@ describe('MCPLoggerProvider and hooks', () => {
 
   beforeEach(() => {
     config = {
-      serverUrl: 'http://localhost:8080',
+      serverUrl: 'http://localhost:9080',
       serviceName: 'test-service',
       agentId: 'test-agent',
       enableConsoleCapture: false,

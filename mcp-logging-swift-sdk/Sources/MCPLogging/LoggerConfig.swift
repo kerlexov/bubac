@@ -92,7 +92,7 @@ public struct LoggerConfig {
     
     /// Default configuration for development
     public static func development(
-        serverURL: URL = URL(string: "http://localhost:8080")!,
+        serverURL: URL = URL(string: "http://localhost:9080")!,
         serviceName: String,
         agentID: String
     ) throws -> LoggerConfig {

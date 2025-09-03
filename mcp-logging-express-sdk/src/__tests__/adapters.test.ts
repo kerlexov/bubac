@@ -6,7 +6,7 @@ jest.mock('../logger');
 
 describe('Logging Adapters', () => {
   const mockConfig = {
-    serverUrl: 'http://localhost:8080',
+    serverUrl: 'http://localhost:9080',
     serviceName: 'test-service',
     agentId: 'test-agent'
   };

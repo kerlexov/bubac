@@ -27,17 +27,17 @@ route:
 receivers:
 - name: 'web.hook'
   webhook_configs:
-  - url: 'http://mcp-logging-server:8080/alerts'
+  - url: 'http://mcp-logging-server:9080/alerts'
     send_resolved: true
 
 - name: 'critical'
   webhook_configs:
-  - url: 'http://mcp-logging-server:8080/alerts/critical'
+  - url: 'http://mcp-logging-server:9080/alerts/critical'
     send_resolved: true
 
 - name: 'warning'
   webhook_configs:
-  - url: 'http://mcp-logging-server:8080/alerts/warning'
+  - url: 'http://mcp-logging-server:9080/alerts/warning'
     send_resolved: true
 
 inhibit_rules:

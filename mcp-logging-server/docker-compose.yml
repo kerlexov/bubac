@@ -8,7 +8,7 @@ services:
     container_name: mcp-logging-server
     restart: unless-stopped
     ports:
-      - "8080:8080"  # Log ingestion API
+      - "9080:9080"  # Log ingestion API
       - "8081:8081"  # MCP server
     environment:
       - MCP_LOGGING_DB_CONNECTION=/app/data/logs.db
@@ -19,7 +19,7 @@ services:
       - ./config:/app/config
       - ./recovery:/app/recovery
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -52,7 +52,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8090:8080"  # Traefik dashboard (only for development)
+      - "8090:9080"  # Traefik dashboard (only for development)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/letsencrypt:/letsencrypt

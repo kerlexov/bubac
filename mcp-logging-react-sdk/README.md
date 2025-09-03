@@ -28,7 +28,7 @@ import { MCPLoggerProvider } from '@mcp-logging/react-sdk';
 import App from './App';
 
 const config = {
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'my-react-app',
   agentId: 'web-client-001',
 };
@@ -240,7 +240,7 @@ The SDK is written in TypeScript and includes full type definitions:
 import { MCPLogger, LogLevel, MCPLoggerConfig } from '@mcp-logging/react-sdk';
 
 const config: MCPLoggerConfig = {
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'my-app',
   agentId: 'web-001',
 };
@@ -266,7 +266,7 @@ const App = () => {
 
 const Root = () => (
   <MCPLoggerProvider config={{
-    serverUrl: 'http://localhost:8080',
+    serverUrl: 'http://localhost:9080',
     serviceName: 'my-app',
     agentId: 'web-001',
   }}>

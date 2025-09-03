@@ -47,7 +47,7 @@ Create a `config.yaml` file:
 
 ```yaml
 server:
-  ingestion_port: 8080      # Port for log ingestion API
+  ingestion_port: 9080      # Port for log ingestion API
   mcp_port: 8081           # Port for MCP server interface
   
 storage:
@@ -81,7 +81,7 @@ health:
 
 ```bash
 # Server Configuration
-export MCP_LOG_INGESTION_PORT=8080
+export MCP_LOG_INGESTION_PORT=9080
 export MCP_LOG_MCP_PORT=8081
 export MCP_LOG_DB_PATH=./logs.db
 
@@ -105,7 +105,7 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /app/bin/server .
-EXPOSE 8080 8081 8082
+EXPOSE 9080 8081 8082
 
 CMD ["./server"]
 ```
@@ -113,7 +113,7 @@ CMD ["./server"]
 ```bash
 # Build and run with Docker
 docker build -t mcp-logging-server .
-docker run -p 8080:8080 -p 8081:8081 -p 8082:8082 mcp-logging-server
+docker run -p 9080:9080 -p 8081:8081 -p 8082:8082 mcp-logging-server
 ```
 
 #### Docker Compose
@@ -125,7 +125,7 @@ services:
   mcp-logging-server:
     build: ./mcp-logging-server
     ports:
-      - "8080:8080"  # Log ingestion
+      - "9080:9080"  # Log ingestion
       - "8081:8081"  # MCP interface
       - "8082:8082"  # Health checks
     volumes:
@@ -266,7 +266,7 @@ Create or edit `~/.opencode/config.json`:
   },
   "logging": {
     "enabled": true,
-    "server_url": "http://localhost:8080",
+    "server_url": "http://localhost:9080",
     "service_name": "opencode",
     "agent_id": "opencode-agent-001",
     "log_commands": true,
@@ -388,7 +388,7 @@ import "github.com/your-org/mcp-logging-go-sdk/pkg/logger"
 config := logger.DefaultConfig()
 config.ServiceName = "my-go-app"
 config.AgentID = "app-instance-001"
-config.ServerURL = "http://localhost:8080"
+config.ServerURL = "http://localhost:9080"
 
 mcpLogger, _ := logger.New(config)
 mcpLogger.Info("Application started")
@@ -418,7 +418,7 @@ const mcpLogger = require('@your-org/mcp-logging-express');
 
 // Middleware usage
 app.use(mcpLogger.middleware({
-    serverUrl: 'http://localhost:8080',
+    serverUrl: 'http://localhost:9080',
     serviceName: 'my-api',
     agentId: 'api-001'
 }));
@@ -460,7 +460,7 @@ func main() {
     config := logger.DefaultConfig()
     config.ServiceName = "my-go-app"
     config.AgentID = "app-instance-001"
-    config.ServerURL = "http://localhost:8080"
+    config.ServerURL = "http://localhost:9080"
     
     // Create logger
     mcpLogger, err := logger.New(config)
@@ -524,7 +524,7 @@ Would you like me to get more details about any of these errors?
 │                 │    │                  │    │   Desktop       │
 │ ┌─────────────┐ │    │ ┌──────────────┐ │    │ ┌─────────────┐ │
 │ │   Go SDK    │─┼────┼─│ Log Ingestion│ │    │ │   MCP       │ │
-│ └─────────────┘ │    │ │   API :8080  │ │    │ │  Client     │ │
+│ └─────────────┘ │    │ │   API :9080  │ │    │ │  Client     │ │
 │                 │    │ └──────────────┘ │    │ └─────────────┘ │
 │ ┌─────────────┐ │    │ ┌──────────────┐ │    └─────────────────┘
 │ │ OpenCode    │─┼────┼─│ SQLite/PG DB │ │             │
@@ -572,7 +572,7 @@ curl http://localhost:8082/metrics
 1. **Server won't start**
    ```bash
    # Check port availability
-   netstat -an | grep :8080
+   netstat -an | grep :9080
    
    # Check configuration
    ./bin/mcp-logging-server --config-check
@@ -597,7 +597,7 @@ curl http://localhost:8082/metrics
 
 ```bash
 # Test log ingestion
-curl -X POST http://localhost:8080/api/logs \
+curl -X POST http://localhost:9080/api/logs \
   -H "Content-Type: application/json" \
   -d '{"logs":[{"level":"INFO","message":"test","service_name":"test","agent_id":"test","platform":"curl"}]}'
 

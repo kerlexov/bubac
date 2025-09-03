@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Create logger with high-throughput buffer
 const logger = new MCPLogger({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'advanced-example',
   agentId: 'advanced-001',
   bufferSize: 2000, // Large buffer triggers high-throughput mode
@@ -26,7 +26,7 @@ errorHandler.enableGlobalErrorCapture();
 
 // Add comprehensive middleware
 app.use(createMiddleware({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'advanced-example',
   agentId: 'advanced-001',
   logRequests: true,

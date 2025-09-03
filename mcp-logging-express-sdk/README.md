@@ -20,7 +20,7 @@ const app = express();
 
 // Add MCP logging middleware
 app.use(createMiddleware({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'my-api',
   agentId: 'api-001',
   logRequests: true,
@@ -40,7 +40,7 @@ app.listen(3000);
 const { MCPLogger } = require('@mcp-logging/express-sdk');
 
 const logger = new MCPLogger({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'my-service',
   agentId: 'service-001'
 });
@@ -66,7 +66,7 @@ process.on('SIGTERM', async () => {
 ```javascript
 const middlewareOptions = {
   // Required
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'my-service',
   agentId: 'service-001',
   
@@ -99,7 +99,7 @@ const middlewareOptions = {
 ```javascript
 const loggerConfig = {
   // Required
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'my-service',
   agentId: 'service-001',
   
@@ -129,7 +129,7 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console(),
     createWinstonTransport({
-      serverUrl: 'http://localhost:8080',
+      serverUrl: 'http://localhost:9080',
       serviceName: 'my-service',
       agentId: 'service-001'
     })
@@ -156,7 +156,7 @@ const logger = bunyan.createLogger({
       level: 'info',
       type: 'raw',
       stream: createBunyanStream({
-        serverUrl: 'http://localhost:8080',
+        serverUrl: 'http://localhost:9080',
         serviceName: 'my-service',
         agentId: 'service-001'
       })
@@ -177,13 +177,13 @@ const { createMiddleware, MCPLogger } = require('@mcp-logging/express-sdk');
 
 const app = express();
 const logger = new MCPLogger({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'my-api',
   agentId: 'api-001'
 });
 
 app.use(createMiddleware({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'my-api',
   agentId: 'api-001'
 }));
@@ -215,7 +215,7 @@ const { MCPLogger } = require('@mcp-logging/express-sdk');
 class UserService {
   constructor() {
     this.logger = new MCPLogger({
-      serverUrl: 'http://localhost:8080',
+      serverUrl: 'http://localhost:9080',
       serviceName: 'user-service',
       agentId: 'user-001'
     });
@@ -314,7 +314,7 @@ app.get('/health/detailed', healthChecker.createDetailedHealthEndpoint());
 
 ```javascript
 const logger = new MCPLogger({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'high-volume-service',
   agentId: 'service-001',
   bufferSize: 2000 // Automatically enables high-throughput mode
@@ -337,7 +337,7 @@ The middleware now captures extensive metadata including:
 
 ```javascript
 app.use(createMiddleware({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'api-service',
   agentId: 'api-001',
   includeHeaders: true,

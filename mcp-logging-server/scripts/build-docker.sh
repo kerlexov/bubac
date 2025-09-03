@@ -232,7 +232,7 @@ main() {
         log_info "Image tagged as: $TAG"
         echo ""
         log_info "Next steps:"
-        echo "  • Test the image: docker run -p 8080:8080 $TAG"
+        echo "  • Test the image: docker run -p 9080:9080 $TAG"
         echo "  • Deploy to Coolify: Use docker-compose.coolify-monitoring.yml"
         echo "  • Check logs: docker logs <container-name>"
     else

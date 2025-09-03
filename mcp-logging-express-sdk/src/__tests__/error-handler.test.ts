@@ -10,7 +10,7 @@ describe('ErrorHandler', () => {
 
   beforeEach(() => {
     mockLogger = new MCPLogger({
-      serverUrl: 'http://localhost:8080',
+      serverUrl: 'http://localhost:9080',
       serviceName: 'test',
       agentId: 'test'
     }) as jest.Mocked<MCPLogger>;

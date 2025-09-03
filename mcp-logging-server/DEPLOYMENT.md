@@ -7,6 +7,7 @@ This guide provides comprehensive instructions for deploying the MCP Logging Ser
 - Coolify instance running (v4.0 or later)
 - Domain names configured for API and MCP endpoints
 - SSL certificates (handled automatically by Coolify)
+- Go 1.23 or higher (for local development and Docker builds)
 
 ## Quick Start
 
@@ -231,6 +232,12 @@ The deployment includes Coolify-specific labels for:
 git clone <repository-url>
 cd mcp-logging-server
 
+# Check Go version compatibility
+./scripts/check-go-version.sh
+
+# Determine correct build architecture for your server
+./scripts/determine-architecture.sh
+
 # Copy and configure environment
 cp .env.coolify .env
 # Edit .env with your domain names and settings
@@ -263,9 +270,72 @@ curl https://mcp.mcp-logging.yourdomain.com/mcp/health
 
 ## Troubleshooting
 
+### Architecture-Specific Builds
+
+The Dockerfile supports cross-platform builds. You can either use the automated build script or manually specify architecture parameters:
+
+#### Automated Build (Recommended)
+```bash
+# Automatic architecture detection and build
+./scripts/build-docker.sh
+
+# Build with custom tag
+./scripts/build-docker.sh --tag=my-registry.com/mcp-server
+
+# Build without cache
+./scripts/build-docker.sh --no-cache
+
+# Force specific architecture
+./scripts/build-docker.sh --arch=amd64  # For Hetzner x86_64
+./scripts/build-docker.sh --arch=arm64  # For AWS Graviton
+```
+
+#### Manual Build
+```bash
+# For Hetzner (x86_64) servers:
+docker build --build-arg TARGETARCH=amd64 --build-arg TARGETOS=linux -t mcp-logging-server .
+
+# For AWS Graviton/ARM64 servers:
+docker build --build-arg TARGETARCH=arm64 --build-arg TARGETOS=linux -t mcp-logging-server .
+
+# For automatic detection:
+./scripts/determine-architecture.sh
+```
+
 ### Common Issues
 
-1. **Container Won't Start**
+1. **Go Version Compatibility Error**
+   ```bash
+   # Run the version check script
+   ./scripts/check-go-version.sh
+
+   # If Go version is too old, upgrade to Go 1.23+
+   # Download from: https://golang.org/dl/
+   ```
+
+2. **ARM64 Assembly Errors on x86_64**
+   ```bash
+   # This happens when building for wrong architecture
+   # Use the automated build script (recommended):
+   ./scripts/build-docker.sh
+
+   # Or manually specify architecture for Hetzner x86_64 servers:
+   docker build --build-arg TARGETARCH=amd64 --build-arg TARGETOS=linux -t mcp-logging-server .
+
+   # Check your server architecture:
+   uname -m  # Should show x86_64 for Hetzner
+   ./scripts/determine-architecture.sh  # For detailed info
+   ```
+
+3. **GCC Assembly Instruction Errors**
+   ```bash
+   # If you see errors like "no such instruction: stp x29,x30,[sp,"
+   # This means you're trying to build ARM64 code on x86_64
+   # Solution: Use correct TARGETARCH
+   docker build --build-arg TARGETARCH=amd64 -t mcp-logging-server .
+   ```
+
+4. **Container Won't Start**
    - Check environment variables in Coolify
    - Verify volume mounts are created
    - Check container logs: `docker logs mcp-logging-server`
@@ -298,7 +368,7 @@ docker logs -f mcp-logging-server
 docker exec -it mcp-logging-server cat /app/config/config.yaml
 
 # Test internal health check
-docker exec -it mcp-logging-server wget -qO- http://localhost:8080/health
+docker exec -it mcp-logging-server wget -qO- http://localhost:9080/health
 
 # Check API key configuration
 docker exec -it mcp-logging-server ./apikey list

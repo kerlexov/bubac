@@ -6,7 +6,7 @@ app.use(express.json());
 
 // Create a direct logger instance
 const logger = new MCPLogger({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'example-api',
   agentId: 'api-001',
   bufferSize: 100,
@@ -15,7 +15,7 @@ const logger = new MCPLogger({
 
 // Add MCP logging middleware
 app.use(createMiddleware({
-  serverUrl: 'http://localhost:8080',
+  serverUrl: 'http://localhost:9080',
   serviceName: 'example-api',
   agentId: 'api-001',
   logRequests: true,

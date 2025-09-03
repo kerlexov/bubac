@@ -39,7 +39,7 @@ func main() {
     config := logger.DefaultConfig()
     config.ServiceName = "my-service"
     config.AgentID = "agent-001"
-    config.ServerURL = "http://localhost:8080"
+    config.ServerURL = "http://localhost:9080"
     
     // Create logger
     mcpLogger, err := logger.New(config)
@@ -66,7 +66,7 @@ func main() {
 
 ```go
 config := logger.Config{
-    ServerURL:     "http://localhost:8080",  // MCP server URL
+    ServerURL:     "http://localhost:9080",  // MCP server URL
     ServiceName:   "my-service",             // Service identifier
     AgentID:       "agent-001",              // Agent identifier
     BufferSize:    1000,                     // Local buffer size

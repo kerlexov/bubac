@@ -41,11 +41,11 @@ services:
       - mcp_logging_audit:/app/audit
     
     ports:
-      - "${INGESTION_PORT:-8080}:8080"  # Log ingestion API
+      - "${INGESTION_PORT:-9080}:9080"  # Log ingestion API
       - "${MCP_PORT:-8081}:8081"        # MCP server
     
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9080/health"]
       interval: 30s
       timeout: 10s
       retries: 3

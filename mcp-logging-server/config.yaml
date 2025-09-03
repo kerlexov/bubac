@@ -1,5 +1,5 @@
 server:
-  ingestion_port: 8080
+  ingestion_port: 9080
   mcp_port: 8081
 
 storage:

@@ -94,7 +94,7 @@ MCPLogging.error("Network request failed", metadata: [
 
 ```swift
 let config = try LoggerConfig.development(
-    serverURL: URL(string: "http://localhost:8080")!, // Optional, defaults to localhost
+    serverURL: URL(string: "http://localhost:9080")!, // Optional, defaults to localhost
     serviceName: "my-app",
     agentID: "unique-agent-id"
 )

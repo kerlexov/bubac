@@ -54,7 +54,7 @@ Edit `config.yaml` to match your environment:
 
 ```yaml
 server:
-  ingestion_port: 8080
+  ingestion_port: 9080
   mcp_port: 8081
 
 storage:
@@ -79,7 +79,7 @@ go run cmd/server/main.go
 ```
 
 The server will start two services:
-- **Log Ingestion API**: `http://localhost:8080` - Receives logs from SDKs
+- **Log Ingestion API**: `http://localhost:9080` - Receives logs from SDKs
 - **MCP Server**: `http://localhost:8081` - Provides MCP tools for log querying
 
 ## Configuration
@@ -180,7 +180,7 @@ go test ./...
 
 ```bash
 docker build -t mcp-logging-server .
-docker run -p 8080:8080 -p 8081:8081 mcp-logging-server
+docker run -p 9080:9080 -p 8081:8081 mcp-logging-server
 ```
 
 ## SDKs

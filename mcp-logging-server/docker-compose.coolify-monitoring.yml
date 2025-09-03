@@ -68,11 +68,11 @@ services:
       - mcp_logging_audit:/app/audit
 
     ports:
-      - "${INGESTION_PORT:-8080}:8080"  # Log ingestion API
+      - "${INGESTION_PORT:-9080}:9080"  # Log ingestion API
       - "${MCP_PORT:-8081}:8081"        # MCP server
 
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -111,7 +111,7 @@ services:
       - "traefik.http.routers.mcp-logging-api.entrypoints=websecure"
       - "traefik.http.routers.mcp-logging-api.tls.certresolver=letsencrypt"
       - "traefik.http.routers.mcp-logging-api.service=mcp-logging-api"
-      - "traefik.http.services.mcp-logging-api.loadbalancer.server.port=8080"
+      - "traefik.http.services.mcp-logging-api.loadbalancer.server.port=9080"
 
       # MCP server routing
       - "traefik.http.routers.mcp-logging-mcp.rule=Host(`${MCP_DOMAIN}`) && PathPrefix(`/mcp`)"
@@ -141,7 +141,7 @@ services:
       # Health check configuration
       - "coolify.healthcheck.enabled=true"
       - "coolify.healthcheck.path=/health"
-      - "coolify.healthcheck.port=8080"
+      - "coolify.healthcheck.port=9080"
       - "coolify.healthcheck.interval=30s"
       - "coolify.healthcheck.timeout=10s"
       - "coolify.healthcheck.retries=3"

@@ -9,7 +9,7 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 describe('MCPLogger', () => {
   let logger: MCPLogger;
   const mockConfig = {
-    serverUrl: 'http://localhost:8080',
+    serverUrl: 'http://localhost:9080',
     serviceName: 'test-service',
     agentId: 'test-agent',
     bufferSize: 10,
@@ -62,7 +62,7 @@ describe('MCPLogger', () => {
   describe('configuration', () => {
     test('should use default configuration values', () => {
       const minimalConfig = {
-        serverUrl: 'http://localhost:8080',
+        serverUrl: 'http://localhost:9080',
         serviceName: 'test',
         agentId: 'test'
       };

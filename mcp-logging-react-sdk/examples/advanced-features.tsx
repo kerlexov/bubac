@@ -399,7 +399,7 @@ const AdvancedApp: React.FC = () => {
 // Root with advanced configuration
 const AdvancedRoot: React.FC = () => {
   const config = {
-    serverUrl: 'http://localhost:8080',
+    serverUrl: 'http://localhost:9080',
     serviceName: 'react-advanced-demo',
     agentId: 'web-advanced-001',
     bufferSize: 5, // Smaller buffer for more frequent flushes

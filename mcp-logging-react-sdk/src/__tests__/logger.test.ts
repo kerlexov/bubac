@@ -9,7 +9,7 @@ describe('MCPLoggerImpl', () => {
 
   beforeEach(() => {
     config = {
-      serverUrl: 'http://localhost:8080',
+      serverUrl: 'http://localhost:9080',
       serviceName: 'test-service',
       agentId: 'test-agent',
       bufferSize: 2,
@@ -74,7 +74,7 @@ describe('MCPLoggerImpl', () => {
       await new Promise(resolve => setTimeout(resolve, 10));
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/logs',
+        'http://localhost:9080/api/logs',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

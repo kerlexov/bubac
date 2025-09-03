@@ -76,7 +76,7 @@ COPY --from=builder --chown=appuser:appgroup /app/config.yaml /app/config/
 USER appuser
 
 # Expose ports
-EXPOSE 8080 8081
+EXPOSE 9080 8081
 
 # Set environment variables
 ENV MCP_LOGGING_DB_CONNECTION=/app/data/logs.db \
@@ -85,7 +85,7 @@ ENV MCP_LOGGING_DB_CONNECTION=/app/data/logs.db \
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:9080/health || exit 1
 
 # Run the application
 CMD ["./mcp-logging-server"]

@@ -9,7 +9,7 @@ describe('Express Middleware', () => {
   let app: express.Application;
   
   const mockConfig = {
-    serverUrl: 'http://localhost:8080',
+    serverUrl: 'http://localhost:9080',
     serviceName: 'test-service',
     agentId: 'test-agent'
   };

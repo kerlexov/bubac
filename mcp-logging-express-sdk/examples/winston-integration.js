@@ -23,7 +23,7 @@ const logger = winston.createLogger({
     }),
     // MCP transport for centralized logging
     createWinstonTransport({
-      serverUrl: 'http://localhost:8080',
+      serverUrl: 'http://localhost:9080',
       serviceName: 'winston-example',
       agentId: 'winston-001'
     })

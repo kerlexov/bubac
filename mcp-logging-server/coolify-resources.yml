@@ -35,7 +35,7 @@ services:
     healthcheck:
       enabled: true
       path: /health
-      port: "${INGESTION_PORT:-8080}"
+      port: "${INGESTION_PORT:-9080}"
       interval: "${HEALTH_CHECK_INTERVAL:-30s}"
       timeout: "${HEALTH_CHECK_TIMEOUT:-10s}"
       retries: "${HEALTH_CHECK_RETRIES:-3}"
@@ -263,7 +263,7 @@ deployment:
   readiness_probe:
     http_get:
       path: /health
-      port: "${INGESTION_PORT:-8080}"
+      port: "${INGESTION_PORT:-9080}"
     initial_delay_seconds: 30
     period_seconds: 10
     timeout_seconds: 5
@@ -272,7 +272,7 @@ deployment:
   liveness_probe:
     http_get:
       path: /health
-      port: "${INGESTION_PORT:-8080}"
+      port: "${INGESTION_PORT:-9080}"
     initial_delay_seconds: 60
     period_seconds: 30
     timeout_seconds: 10

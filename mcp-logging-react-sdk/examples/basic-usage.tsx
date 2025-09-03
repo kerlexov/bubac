@@ -208,7 +208,7 @@ const App: React.FC = () => {
 // Root component with provider
 const Root: React.FC = () => {
   const config = {
-    serverUrl: 'http://localhost:8080',
+    serverUrl: 'http://localhost:9080',
     serviceName: 'react-demo-app',
     agentId: 'web-demo-001',
     bufferSize: 10,

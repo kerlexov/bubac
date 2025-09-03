@@ -4,7 +4,7 @@ import XCTest
 final class LoggerConfigTests: XCTestCase {
     
     func testValidConfiguration() throws {
-        let serverURL = URL(string: "http://localhost:8080")!
+        let serverURL = URL(string: "http://localhost:9080")!
         
         let config = try LoggerConfig(
             serverURL: serverURL,
@@ -20,7 +20,7 @@ final class LoggerConfigTests: XCTestCase {
     }
     
     func testInvalidServiceName() {
-        let serverURL = URL(string: "http://localhost:8080")!
+        let serverURL = URL(string: "http://localhost:9080")!
         
         XCTAssertThrowsError(try LoggerConfig(
             serverURL: serverURL,
@@ -32,7 +32,7 @@ final class LoggerConfigTests: XCTestCase {
     }
     
     func testInvalidAgentID() {
-        let serverURL = URL(string: "http://localhost:8080")!
+        let serverURL = URL(string: "http://localhost:9080")!
         
         XCTAssertThrowsError(try LoggerConfig(
             serverURL: serverURL,
