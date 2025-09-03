@@ -1,0 +1,203 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "MCP Logging Server Overview",
+    "tags": ["mcp", "logging", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"mcp-logging-server\"}",
+            "legendFormat": "MCP Server"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "DOWN",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "UP",
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"mcp-logging-server\"}[5m])",
+            "legendFormat": "Requests/sec"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"mcp-logging-server\", status=~\"5..\"}[5m])",
+            "legendFormat": "5xx Errors/sec"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Log Ingestion Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(log_entries_ingested_total[5m])",
+            "legendFormat": "Logs ingested/sec"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Buffer Size",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "log_buffer_size",
+            "legendFormat": "Buffer entries"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "db_connections_active",
+            "legendFormat": "Active connections"
+          },
+          {
+            "expr": "db_connections_idle",
+            "legendFormat": "Idle connections"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes{job=\"mcp-logging-server\"}",
+            "legendFormat": "Memory usage"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(process_cpu_user_seconds_total{job=\"mcp-logging-server\"}[5m]) * 100",
+            "legendFormat": "CPU usage %"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Disk Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "disk_used_percent",
+            "legendFormat": "Disk usage %"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Rate Limiting",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(rate_limit_exceeded_total[5m])",
+            "legendFormat": "Rate limit hits"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Circuit Breaker Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "circuit_breaker_state",
+            "legendFormat": "Circuit breaker"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "CLOSED",
+                    "color": "green"
+                  },
+                  "1": {
+                    "text": "OPEN",
+                    "color": "red"
+                  },
+                  "2": {
+                    "text": "HALF-OPEN",
+                    "color": "yellow"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Log Levels Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum(increase(log_entries_by_level_total[1h])) by (level)",
+            "legendFormat": "{{level}}"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}

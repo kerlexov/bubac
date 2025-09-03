@@ -57,6 +57,13 @@ export interface UserInteraction {
     timestamp: Date;
     metadata?: Record<string, any>;
 }
+export interface StorageStats {
+    entryCount: number;
+    sizeBytes: number;
+    maxEntries: number;
+    maxSizeBytes: number;
+    usagePercent: number;
+}
 export interface MCPLogger {
     debug(message: string, metadata?: Record<string, any>): void;
     info(message: string, metadata?: Record<string, any>): void;
@@ -70,4 +77,5 @@ export interface MCPLogger {
         isHealthy: boolean;
         lastError?: string;
     };
+    getStorageStats(): StorageStats | null;
 }

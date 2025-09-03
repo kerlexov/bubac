@@ -6,6 +6,8 @@ export declare class MCPLoggerImpl implements MCPLogger {
     private isHealthy;
     private lastError?;
     private retryCount;
+    private browserFeatures?;
+    private storageManager?;
     constructor(config: MCPLoggerConfig);
     debug(message: string, metadata?: Record<string, any>): void;
     info(message: string, metadata?: Record<string, any>): void;
@@ -19,8 +21,8 @@ export declare class MCPLoggerImpl implements MCPLogger {
     flush(): Promise<void>;
     private sendLogs;
     private handleSendError;
-    private saveToLocalStorage;
     private loadBufferedLogs;
+    private initializeStorageManager;
     private startFlushTimer;
     private setupConsoleCapture;
     private setupErrorCapture;
@@ -31,5 +33,7 @@ export declare class MCPLoggerImpl implements MCPLogger {
         isHealthy: boolean;
         lastError?: string;
     };
+    getStorageStats(): any;
     destroy(): void;
+    private initializeBrowserFeatures;
 }

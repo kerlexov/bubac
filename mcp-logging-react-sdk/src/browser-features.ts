@@ -199,7 +199,7 @@ export class BrowserFeatures {
         tlsTime: navigation.connectEnd - navigation.secureConnectionStart,
         requestTime: navigation.responseStart - navigation.requestStart,
         responseTime: navigation.responseEnd - navigation.responseStart,
-        domProcessingTime: navigation.domComplete - navigation.domLoading,
+        domProcessingTime: navigation.domComplete - navigation.domInteractive,
         navigationTiming: timing,
       };
 

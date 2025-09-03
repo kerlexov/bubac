@@ -10,75 +10,39 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/your-org/mcp-logging-server/pkg/auth"
 	"github.com/your-org/mcp-logging-server/pkg/buffer"
+	"github.com/your-org/mcp-logging-server/pkg/dataprotection"
 	"github.com/your-org/mcp-logging-server/pkg/metrics"
 	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/your-org/mcp-logging-server/pkg/ratelimit"
 	"github.com/your-org/mcp-logging-server/pkg/recovery"
+	"github.com/your-org/mcp-logging-server/pkg/security"
 	"github.com/your-org/mcp-logging-server/pkg/storage"
+	tlsconfig "github.com/your-org/mcp-logging-server/pkg/tls"
 	"github.com/your-org/mcp-logging-server/pkg/validation"
 )
 
-// RateLimiter implements a simple rate limiter for requests
-type RateLimiter struct {
-	requests map[string][]time.Time
-	mutex    sync.RWMutex
-	limit    int
-	window   time.Duration
-}
-
-// NewRateLimiter creates a new rate limiter
-func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
-	return &RateLimiter{
-		requests: make(map[string][]time.Time),
-		limit:    limit,
-		window:   window,
-	}
-}
-
-// Allow checks if a request from the given IP is allowed
-func (rl *RateLimiter) Allow(ip string) bool {
-	rl.mutex.Lock()
-	defer rl.mutex.Unlock()
-	
-	now := time.Now()
-	cutoff := now.Add(-rl.window)
-	
-	// Clean old requests
-	if requests, exists := rl.requests[ip]; exists {
-		validRequests := make([]time.Time, 0)
-		for _, reqTime := range requests {
-			if reqTime.After(cutoff) {
-				validRequests = append(validRequests, reqTime)
-			}
-		}
-		rl.requests[ip] = validRequests
-	}
-	
-	// Check if limit exceeded
-	if len(rl.requests[ip]) >= rl.limit {
-		return false
-	}
-	
-	// Add current request
-	rl.requests[ip] = append(rl.requests[ip], now)
-	return true
-}
-
 // Server represents the log ingestion HTTP server
 type Server struct {
-	port            int
-	storage         storage.LogStorage
-	buffer          *buffer.MessageBuffer
-	server          *http.Server
-	metrics         *metrics.Metrics
-	validator       *validation.LogValidator
-	recoveryManager *recovery.RecoveryManager
-	rateLimiter     *RateLimiter
-	circuitBreaker  *CircuitBreaker
+	port               int
+	storage            storage.LogStorage
+	buffer             *buffer.MessageBuffer
+	server             *http.Server
+	metrics            *metrics.Metrics
+	validator          *validation.LogValidator
+	recoveryManager    *recovery.RecoveryManager
+	rateLimiter        *ratelimit.RateLimiter
+	circuitBreaker     *CircuitBreaker
+	authManager        *auth.APIKeyManager
+	tlsConfig          *tlsconfig.TLSConfig
+	securityConfig     *security.SecurityConfig
+	dataProtection     *dataprotection.DataProtectionProcessor
+	auditStatsCollector *dataprotection.AuditStatsCollector
 }
 
 // NewServer creates a new ingestion server
-func NewServer(port int, storage storage.LogStorage, bufferConfig buffer.Config, recoveryDir string) *Server {
+func NewServer(port int, storage storage.LogStorage, bufferConfig buffer.Config, recoveryDir string, authManager *auth.APIKeyManager, rateLimitConfig *ratelimit.RateLimitConfig, tlsConfig *tlsconfig.TLSConfig, securityConfig *security.SecurityConfig, dataProtectionConfig *dataprotection.DataProtectionConfig) *Server {
 	metricsReporter := metrics.NewMetrics()
 	recoveryManager := recovery.NewRecoveryManager(recoveryDir)
 	
@@ -89,15 +53,48 @@ func NewServer(port int, storage storage.LogStorage, bufferConfig buffer.Config,
 	
 	messageBuffer := buffer.NewMessageBufferWithOptions(storage, bufferConfig, bufferOptions)
 	
+	// Use provided configs or defaults
+	if rateLimitConfig == nil {
+		rateLimitConfig = ratelimit.DefaultRateLimitConfig()
+	}
+	if tlsConfig == nil {
+		tlsConfig = tlsconfig.DefaultTLSConfig()
+	}
+	if securityConfig == nil {
+		securityConfig = security.DefaultSecurityConfig()
+	}
+	if dataProtectionConfig == nil {
+		dataProtectionConfig = dataprotection.DefaultDataProtectionConfig()
+	}
+	
+	// Initialize data protection processor
+	dataProtectionProcessor, err := dataprotection.NewDataProtectionProcessor(dataProtectionConfig)
+	if err != nil {
+		// Log error but continue with disabled data protection
+		fmt.Printf("Failed to initialize data protection: %v\n", err)
+		dataProtectionProcessor = nil
+	}
+	
+	// Initialize audit stats collector
+	var auditStatsCollector *dataprotection.AuditStatsCollector
+	if dataProtectionConfig.AuditEnabled {
+		auditStatsCollector = dataprotection.NewAuditStatsCollector()
+	}
+	
 	return &Server{
-		port:            port,
-		storage:         storage,
-		buffer:          messageBuffer,
-		metrics:         metricsReporter,
-		validator:       validation.NewLogValidator(),
-		recoveryManager: recoveryManager,
-		rateLimiter:     NewRateLimiter(1000, time.Minute), // 1000 requests per minute per IP
-		circuitBreaker:  NewCircuitBreaker(5, 30*time.Second, 60*time.Second), // 5 failures, 30s timeout, 60s reset
+		port:               port,
+		storage:            storage,
+		buffer:             messageBuffer,
+		metrics:            metricsReporter,
+		validator:          validation.NewLogValidator(),
+		recoveryManager:    recoveryManager,
+		rateLimiter:        ratelimit.NewRateLimiter(rateLimitConfig),
+		circuitBreaker:     NewCircuitBreaker(5, 30*time.Second, 60*time.Second), // 5 failures, 30s timeout, 60s reset
+		authManager:        authManager,
+		tlsConfig:          tlsConfig,
+		securityConfig:     securityConfig,
+		dataProtection:     dataProtectionProcessor,
+		auditStatsCollector: auditStatsCollector,
 	}
 }
 
@@ -108,10 +105,17 @@ func (s *Server) Start(ctx context.Context) error {
 	
 	router := gin.New()
 	
+	// Apply security middleware first
+	if err := security.ApplySecurityMiddleware(router, s.securityConfig); err != nil {
+		return fmt.Errorf("failed to apply security middleware: %w", err)
+	}
+	
 	// Add comprehensive middleware
 	router.Use(s.loggingMiddleware())
 	router.Use(s.recoveryMiddleware())
-	router.Use(s.rateLimitMiddleware())
+	router.Use(auth.AuthMiddleware(s.authManager))
+	router.Use(ratelimit.RateLimitMiddleware(s.rateLimiter))
+	router.Use(dataprotection.DataProtectionMiddleware(s.dataProtection))
 	router.Use(s.corsMiddleware())
 	router.Use(s.requestSizeMiddleware())
 	router.Use(s.timeoutMiddleware())
@@ -126,6 +130,15 @@ func (s *Server) Start(ctx context.Context) error {
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  120 * time.Second,
+	}
+	
+	// Configure TLS if enabled
+	if s.tlsConfig.Enabled {
+		tlsConf, err := s.tlsConfig.GetTLSConfig()
+		if err != nil {
+			return fmt.Errorf("failed to configure TLS: %w", err)
+		}
+		s.server.TLSConfig = tlsConf
 	}
 	
 	// Recover any pending logs from previous session
@@ -146,12 +159,19 @@ func (s *Server) Start(ctx context.Context) error {
 	
 	// Start server in a goroutine
 	go func() {
-		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		var err error
+		if s.tlsConfig.Enabled {
+			fmt.Printf("Starting HTTPS ingestion server on port %d\n", s.port)
+			err = s.server.ListenAndServeTLS(s.tlsConfig.CertFile, s.tlsConfig.KeyFile)
+		} else {
+			fmt.Printf("Starting HTTP ingestion server on port %d\n", s.port)
+			err = s.server.ListenAndServe()
+		}
+		
+		if err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Failed to start ingestion server: %v\n", err)
 		}
 	}()
-	
-	fmt.Printf("Ingestion server started on port %d\n", s.port)
 	
 	// Wait for context cancellation
 	<-ctx.Done()
@@ -187,22 +207,37 @@ func (s *Server) Stop() error {
 
 // registerRoutes registers all HTTP routes
 func (s *Server) registerRoutes(router *gin.Engine) {
-	// Health check endpoint
+	// Health check endpoint (public)
 	router.GET("/health", s.handleHealthCheck)
 	
-	// Metrics and stats endpoints
-	router.GET("/metrics", s.handleMetrics)
-	router.GET("/stats", s.handleBufferStats)
-	router.GET("/recovery/stats", s.handleRecoveryStats)
-	router.GET("/circuit-breaker/stats", s.handleCircuitBreakerStats)
-	router.POST("/circuit-breaker/reset", s.handleCircuitBreakerReset)
+	// Metrics and stats endpoints (require metrics permission)
+	metricsGroup := router.Group("/")
+	metricsGroup.Use(auth.RequirePermission(s.authManager, auth.PermissionMetrics))
+	{
+		metricsGroup.GET("/metrics", s.handleMetrics)
+		metricsGroup.GET("/stats", s.handleBufferStats)
+		metricsGroup.GET("/recovery/stats", s.handleRecoveryStats)
+		metricsGroup.GET("/circuit-breaker/stats", s.handleCircuitBreakerStats)
+	}
 	
-	// Log ingestion endpoints
+	// Admin endpoints (require admin permission)
+	adminGroup := router.Group("/admin")
+	adminGroup.Use(auth.RequirePermission(s.authManager, auth.PermissionAdmin))
+	adminGroup.Use(ratelimit.AdminRateLimitMiddleware(s.rateLimiter))
+	adminGroup.Use(dataprotection.AdminDataProtectionMiddleware(s.dataProtection, s.auditStatsCollector))
+	{
+		adminGroup.POST("/circuit-breaker/reset", s.handleCircuitBreakerReset)
+		adminGroup.POST("/flush", s.handleFlushBuffer)
+		// Rate limit management endpoints are handled by AdminRateLimitMiddleware
+		// Data protection management endpoints are handled by AdminDataProtectionMiddleware
+	}
+	
+	// Log ingestion endpoints (require ingest_logs permission)
 	v1 := router.Group("/v1")
+	v1.Use(auth.RequirePermission(s.authManager, auth.PermissionIngestLogs))
 	{
 		v1.POST("/logs", s.handleIngestLogs)
 		v1.POST("/logs/batch", s.handleIngestLogsBatch)
-		v1.POST("/flush", s.handleFlushBuffer)
 	}
 }
 
@@ -313,6 +348,21 @@ func (s *Server) handleIngestLogs(c *gin.Context) {
 		return
 	}
 	
+	// Apply data protection
+	if s.dataProtection != nil {
+		if err := s.dataProtection.ProcessLogEntry(&logEntry); err != nil {
+			s.metrics.IncrementRequestsFailed()
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": gin.H{
+					"code":    "DATA_PROTECTION_ERROR",
+					"message": "Failed to apply data protection",
+					"details": err.Error(),
+				},
+			})
+			return
+		}
+	}
+	
 	// Add to buffer
 	if err := s.buffer.Add([]models.LogEntry{logEntry}); err != nil {
 		s.metrics.IncrementRequestsFailed()
@@ -410,6 +460,21 @@ func (s *Server) handleIngestLogsBatch(c *gin.Context) {
 			},
 		})
 		return
+	}
+	
+	// Apply data protection to valid entries
+	if s.dataProtection != nil {
+		if err := dataprotection.ProcessLogEntries(s.dataProtection, batchResult.ValidEntries); err != nil {
+			s.metrics.IncrementRequestsFailed()
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": gin.H{
+					"code":    "DATA_PROTECTION_ERROR",
+					"message": "Failed to apply data protection",
+					"details": err.Error(),
+				},
+			})
+			return
+		}
 	}
 	
 	// Add to buffer
@@ -567,29 +632,7 @@ func (s *Server) recoveryMiddleware() gin.HandlerFunc {
 	})
 }
 
-// rateLimitMiddleware implements rate limiting per IP address
-func (s *Server) rateLimitMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		clientIP := c.ClientIP()
-		
-		if !s.rateLimiter.Allow(clientIP) {
-			s.metrics.IncrementRequestsFailed()
-			
-			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error": gin.H{
-					"code":       "RATE_LIMIT_EXCEEDED",
-					"message":    "Rate limit exceeded",
-					"details":    "Too many requests from this IP address",
-					"retry_after": 60,
-				},
-			})
-			c.Abort()
-			return
-		}
-		
-		c.Next()
-	}
-}
+
 
 // corsMiddleware handles CORS headers for cross-origin requests
 func (s *Server) corsMiddleware() gin.HandlerFunc {

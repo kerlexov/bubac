@@ -95,8 +95,11 @@ describe('MCPLoggerImpl', () => {
 
       logger.info('Message 1');
       
-      // Wait for the async error handling
-      await expect(logger.flush()).rejects.toThrow('Network error');
+      // Flush should not throw, but should handle errors internally
+      await logger.flush();
+
+      // Wait a bit for async error handling
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       const health = logger.getHealthStatus();
       expect(health.isHealthy).toBe(false);

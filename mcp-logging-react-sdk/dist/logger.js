@@ -1,3 +1,5 @@
+import { BrowserFeatures } from './browser-features';
+import { LocalStorageManager } from './storage-manager';
 export class MCPLoggerImpl {
     constructor(config) {
         this.buffer = [];
@@ -16,10 +18,12 @@ export class MCPLoggerImpl {
             logLevel: 'INFO',
             ...config,
         };
+        this.initializeStorageManager();
         this.startFlushTimer();
         this.setupConsoleCapture();
         this.setupErrorCapture();
         this.loadBufferedLogs();
+        this.initializeBrowserFeatures();
     }
     debug(message, metadata) {
         this.log('DEBUG', message, metadata);
@@ -106,50 +110,43 @@ export class MCPLoggerImpl {
     handleSendError(error, logs) {
         this.isHealthy = false;
         this.lastError = error.message || 'Unknown error';
-        if (this.config.enableLocalStorage) {
-            this.saveToLocalStorage(logs);
+        if (this.config.enableLocalStorage && this.storageManager) {
+            this.storageManager.saveLogs(logs);
         }
         if (this.retryCount < this.config.retryAttempts) {
             this.retryCount++;
             const delay = this.config.retryDelay * Math.pow(2, this.retryCount - 1);
             setTimeout(() => {
                 this.sendLogs(logs).catch(() => {
-                    // Final retry failed, logs are lost or saved to localStorage
+                    // Final retry failed, logs are saved to localStorage
                 });
             }, delay);
         }
     }
-    saveToLocalStorage(logs) {
-        try {
-            const existingLogs = localStorage.getItem('mcp-logger-buffer');
-            const bufferedLogs = existingLogs ? JSON.parse(existingLogs) : [];
-            const updatedLogs = [...bufferedLogs, ...logs];
-            // Keep only the most recent 1000 logs to prevent localStorage overflow
-            const trimmedLogs = updatedLogs.slice(-1000);
-            localStorage.setItem('mcp-logger-buffer', JSON.stringify(trimmedLogs));
-        }
-        catch (error) {
-            console.warn('Failed to save logs to localStorage:', error);
-        }
-    }
     loadBufferedLogs() {
-        if (!this.config.enableLocalStorage) {
+        if (!this.config.enableLocalStorage || !this.storageManager) {
             return;
         }
         try {
-            const bufferedLogs = localStorage.getItem('mcp-logger-buffer');
-            if (bufferedLogs) {
-                const logs = JSON.parse(bufferedLogs);
-                this.buffer.push(...logs);
-                localStorage.removeItem('mcp-logger-buffer');
+            const bufferedLogs = this.storageManager.loadLogs();
+            if (bufferedLogs.length > 0) {
+                this.buffer.push(...bufferedLogs);
+                this.storageManager.clearLogs();
                 // Attempt to send buffered logs
-                if (logs.length > 0) {
-                    this.flush();
-                }
+                this.flush();
             }
         }
         catch (error) {
             console.warn('Failed to load buffered logs from localStorage:', error);
+        }
+    }
+    initializeStorageManager() {
+        if (this.config.enableLocalStorage && typeof window !== 'undefined') {
+            this.storageManager = new LocalStorageManager({
+                keyPrefix: `mcp-logger-${this.config.serviceName}`,
+                maxEntries: this.config.bufferSize * 10, // Allow more storage than buffer
+                maxSizeBytes: 5 * 1024 * 1024, // 5MB limit
+            });
         }
     }
     startFlushTimer() {
@@ -238,10 +235,29 @@ export class MCPLoggerImpl {
             lastError: this.lastError,
         };
     }
+    getStorageStats() {
+        if (!this.storageManager) {
+            return null;
+        }
+        return this.storageManager.getStorageStats();
+    }
     destroy() {
         if (this.flushTimer) {
             clearInterval(this.flushTimer);
         }
+        if (this.browserFeatures) {
+            this.browserFeatures.destroy();
+        }
         this.flush();
+    }
+    initializeBrowserFeatures() {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        this.browserFeatures = new BrowserFeatures(this);
+        this.browserFeatures.initialize();
+        if (this.config.enableUserInteractions) {
+            this.browserFeatures.setupEnhancedUserInteractionTracking();
+        }
     }
 }

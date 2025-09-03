@@ -1,0 +1,48 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alertmanager@mcp-logging.yourdomain.com'
+  smtp_auth_username: ''
+  smtp_auth_password: ''
+
+templates:
+  - '/etc/alertmanager/template/*.tmpl'
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+  - match:
+      alertname: MCPLoggingServerDown
+    receiver: 'critical'
+  - match:
+      alertname: HighErrorRate
+    receiver: 'warning'
+  - match:
+      alertname: DiskSpaceLow
+    receiver: 'warning'
+
+receivers:
+- name: 'web.hook'
+  webhook_configs:
+  - url: 'http://mcp-logging-server:8080/alerts'
+    send_resolved: true
+
+- name: 'critical'
+  webhook_configs:
+  - url: 'http://mcp-logging-server:8080/alerts/critical'
+    send_resolved: true
+
+- name: 'warning'
+  webhook_configs:
+  - url: 'http://mcp-logging-server:8080/alerts/warning'
+    send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname']

@@ -1,0 +1,328 @@
+# Coolify Resource Configuration for MCP Logging Server
+# This file defines resource limits, scaling rules, and deployment configuration for Coolify
+
+version: '1.0'
+
+# Global settings
+global:
+  restart_policy: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  read_only: true
+  tmpfs:
+    - /tmp:noexec,nosuid,size=100m
+
+# Service definitions with resource constraints
+services:
+  mcp-logging-server:
+    # Resource limits and requests
+    resources:
+      limits:
+        memory: "${MEMORY_LIMIT:-1Gi}"
+        cpus: "${CPU_LIMIT:-1.0}"
+      reservations:
+        memory: "${MEMORY_RESERVATION:-512Mi}"
+        cpus: "${CPU_RESERVATION:-0.5}"
+
+    # Scaling configuration
+    scaling:
+      min_replicas: "${MIN_REPLICAS:-1}"
+      max_replicas: "${MAX_REPLICAS:-3}"
+      target_cpu_utilization: "${TARGET_CPU_UTILIZATION:-70}"
+      target_memory_utilization: "${TARGET_MEMORY_UTILIZATION:-80}"
+
+    # Health check configuration
+    healthcheck:
+      enabled: true
+      path: /health
+      port: "${INGESTION_PORT:-8080}"
+      interval: "${HEALTH_CHECK_INTERVAL:-30s}"
+      timeout: "${HEALTH_CHECK_TIMEOUT:-10s}"
+      retries: "${HEALTH_CHECK_RETRIES:-3}"
+      start_period: 40s
+
+    # Environment-specific overrides
+    environments:
+      development:
+        resources:
+          limits:
+            memory: 512Mi
+            cpus: '0.5'
+          reservations:
+            memory: 256Mi
+            cpus: '0.25'
+        scaling:
+          min_replicas: 1
+          max_replicas: 1
+
+      staging:
+        resources:
+          limits:
+            memory: 1Gi
+            cpus: '1.0'
+          reservations:
+            memory: 512Mi
+            cpus: '0.5'
+        scaling:
+          min_replicas: 1
+          max_replicas: 2
+
+      production:
+        resources:
+          limits:
+            memory: "${MEMORY_LIMIT:-2Gi}"
+            cpus: "${CPU_LIMIT:-2.0}"
+          reservations:
+            memory: "${MEMORY_RESERVATION:-1Gi}"
+            cpus: "${CPU_RESERVATION:-1.0}"
+        scaling:
+          min_replicas: "${MIN_REPLICAS:-2}"
+          max_replicas: "${MAX_REPLICAS:-5}"
+          target_cpu_utilization: 70
+          target_memory_utilization: 80
+
+  # Monitoring stack resources
+  prometheus:
+    resources:
+      limits:
+        memory: 512Mi
+        cpus: '0.5'
+      reservations:
+        memory: 256Mi
+        cpus: '0.25'
+    scaling:
+      min_replicas: 1
+      max_replicas: 1
+
+  grafana:
+    resources:
+      limits:
+        memory: 256Mi
+        cpus: '0.25'
+      reservations:
+        memory: 128Mi
+        cpus: '0.1'
+    scaling:
+      min_replicas: 1
+      max_replicas: 1
+
+  loki:
+    resources:
+      limits:
+        memory: 512Mi
+        cpus: '0.5'
+      reservations:
+        memory: 256Mi
+        cpus: '0.25'
+    scaling:
+      min_replicas: 1
+      max_replicas: 1
+
+  promtail:
+    resources:
+      limits:
+        memory: 128Mi
+        cpus: '0.1'
+      reservations:
+        memory: 64Mi
+        cpus: '0.05'
+    scaling:
+      min_replicas: 1
+      max_replicas: 1
+
+  alertmanager:
+    resources:
+      limits:
+        memory: 128Mi
+        cpus: '0.1'
+      reservations:
+        memory: 64Mi
+        cpus: '0.05'
+    scaling:
+      min_replicas: 1
+      max_replicas: 1
+
+  node-exporter:
+    resources:
+      limits:
+        memory: 64Mi
+        cpus: '0.05'
+      reservations:
+        memory: 32Mi
+        cpus: '0.02'
+    scaling:
+      min_replicas: 1
+      max_replicas: 1
+
+# Volume configuration
+volumes:
+  mcp_logging_data:
+    driver: local
+    options:
+      type: "${DATA_VOLUME_TYPE:-nfs}"
+      o: "${DATA_VOLUME_OPTIONS:-addr=127.0.0.1}"
+      device: "${DATA_VOLUME_DEVICE:-/mnt/data}"
+
+  mcp_logging_config:
+    driver: local
+    options:
+      type: "${CONFIG_VOLUME_TYPE:-nfs}"
+      o: "${CONFIG_VOLUME_OPTIONS:-addr=127.0.0.1}"
+      device: "${CONFIG_VOLUME_DEVICE:-/mnt/config}"
+
+  mcp_logging_recovery:
+    driver: local
+    options:
+      type: "${RECOVERY_VOLUME_TYPE:-nfs}"
+      o: "${RECOVERY_VOLUME_OPTIONS:-addr=127.0.0.1}"
+      device: "${RECOVERY_VOLUME_DEVICE:-/mnt/recovery}"
+
+  mcp_logging_audit:
+    driver: local
+    options:
+      type: "${AUDIT_VOLUME_TYPE:-nfs}"
+      o: "${AUDIT_VOLUME_OPTIONS:-addr=127.0.0.1}"
+      device: "${AUDIT_VOLUME_DEVICE:-/mnt/audit}"
+
+# Network configuration
+networks:
+  mcp-logging-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: mcp_logging_bridge
+    ipam:
+      config:
+        - subnet: "${NETWORK_SUBNET:-172.20.0.0/16}"
+          gateway: "${NETWORK_GATEWAY:-172.20.0.1}"
+
+# Backup configuration
+backup:
+  enabled: "${BACKUP_ENABLED:-true}"
+  schedule: "${BACKUP_SCHEDULE:-0 2 * * *}"
+  retention: "${BACKUP_RETENTION_DAYS:-30}"
+  compression: "${BACKUP_COMPRESSION:-gzip}"
+  volumes:
+    - mcp_logging_data
+    - mcp_logging_config
+    - mcp_logging_audit
+  exclude_patterns:
+    - "*.tmp"
+    - "*.log"
+    - "cache/*"
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  prometheus:
+    scrape_interval: 15s
+    evaluation_interval: 15s
+    retention: "${PROMETHEUS_RETENTION:-30d}"
+  grafana:
+    admin_password: "${GRAFANA_ADMIN_PASSWORD}"
+    anonymous_access: false
+  loki:
+    retention: "${LOKI_RETENTION:-30d}"
+  alertmanager:
+    enabled: true
+    smtp_enabled: "${SMTP_ENABLED:-false}"
+
+# Security configuration
+security:
+  # Container security
+  no_new_privileges: true
+  read_only_root_filesystem: true
+  drop_capabilities:
+    - ALL
+  security_opts:
+    - no-new-privileges:true
+
+  # Network security
+  internal_network_only: "${INTERNAL_NETWORK_ONLY:-false}"
+
+  # Secret management
+  secrets:
+    - api_keys
+    - database_credentials
+    - smtp_credentials
+    - webhook_urls
+
+# Deployment configuration
+deployment:
+  strategy: rolling
+  max_unavailable: 25%
+  max_surge: 25%
+  progress_deadline_seconds: 600
+
+  # Rollback configuration
+  rollback:
+    enabled: true
+    max_attempts: 3
+    timeout: 300s
+
+  # Health check configuration
+  readiness_probe:
+    http_get:
+      path: /health
+      port: "${INGESTION_PORT:-8080}"
+    initial_delay_seconds: 30
+    period_seconds: 10
+    timeout_seconds: 5
+    failure_threshold: 3
+
+  liveness_probe:
+    http_get:
+      path: /health
+      port: "${INGESTION_PORT:-8080}"
+    initial_delay_seconds: 60
+    period_seconds: 30
+    timeout_seconds: 10
+    failure_threshold: 3
+
+# Maintenance configuration
+maintenance:
+  enabled: "${MAINTENANCE_ENABLED:-false}"
+  window:
+    start: "${MAINTENANCE_WINDOW_START:-02:00}"
+    duration: "${MAINTENANCE_WINDOW_DURATION:-2h}"
+  notification:
+    enabled: "${MAINTENANCE_NOTIFICATION_ENABLED:-true}"
+    webhook_url: "${MAINTENANCE_WEBHOOK_URL}"
+
+# Auto-scaling configuration (for high-traffic deployments)
+autoscaling:
+  enabled: "${AUTO_SCALING_ENABLED:-false}"
+  min_replicas: "${AUTO_SCALING_MIN_INSTANCES:-1}"
+  max_replicas: "${AUTO_SCALING_MAX_INSTANCES:-5}"
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: "${AUTO_SCALING_CPU_THRESHOLD:-70}"
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: "${AUTO_SCALING_MEMORY_THRESHOLD:-80}"
+
+# Cost optimization
+cost_optimization:
+  enabled: "${COST_OPTIMIZATION_ENABLED:-false}"
+  spot_instances: "${SPOT_INSTANCES_ENABLED:-false}"
+  scheduled_scaling:
+    enabled: "${SCHEDULED_SCALING_ENABLED:-false}"
+    schedules:
+      - name: "business-hours"
+        min_replicas: 2
+        max_replicas: 5
+        schedule: "0 9 * * 1-5"  # Monday-Friday 9 AM
+      - name: "off-hours"
+        min_replicas: 1
+        max_replicas: 2
+        schedule: "0 18 * * 1-5"  # Monday-Friday 6 PM
+      - name: "weekend"
+        min_replicas: 1
+        max_replicas: 3
+        schedule: "0 0 * * 0,6"  # Saturday-Sunday midnight
