@@ -1,0 +1,249 @@
+const axios = require('axios');
+const { v4: uuidv4 } = require('uuid');
+import { AxiosInstance } from 'axios';
+import { LogEntry, LogLevel, MCPLoggerConfig, RetryConfig, LoggerAdapter } from './types';
+import { Buffer } from './buffer';
+import { HighThroughputBuffer } from './high-throughput-buffer';
+import { HealthChecker } from './health-check';
+
+export class MCPLogger implements LoggerAdapter {
+  private httpClient: AxiosInstance;
+  private buffer: Buffer<LogEntry>;
+  private highThroughputBuffer?: HighThroughputBuffer;
+  private config: Required<MCPLoggerConfig>;
+  private flushTimer?: NodeJS.Timeout;
+  private isShuttingDown = false;
+  private healthChecker?: HealthChecker;
+
+  constructor(config: MCPLoggerConfig) {
+    this.config = {
+      bufferSize: 1000,
+      flushInterval: 5000,
+      retryConfig: {
+        maxRetries: 3,
+        initialDelay: 1000,
+        maxDelay: 30000,
+        backoffMultiplier: 2
+      },
+      enableHealthCheck: false,
+      healthCheckPort: 3001,
+      ...config
+    };
+
+    this.httpClient = axios.create({
+      baseURL: this.config.serverUrl,
+      timeout: 10000,
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': `mcp-logging-express-sdk/1.0.0`
+      }
+    });
+
+    this.buffer = new Buffer<LogEntry>(this.config.bufferSize);
+    
+    // Use high-throughput buffer for better performance if buffer size is large
+    if (this.config.bufferSize > 500) {
+      this.highThroughputBuffer = new HighThroughputBuffer(
+        Math.min(this.config.bufferSize, 1000),
+        Math.max(Math.floor(this.config.bufferSize / 1000), 5)
+      );
+    }
+    
+    this.healthChecker = new HealthChecker(this, this.highThroughputBuffer);
+    this.startFlushTimer();
+    this.setupGracefulShutdown();
+  }
+
+  debug(message: string, metadata?: Record<string, any>): void {
+    this.log(LogLevel.DEBUG, message, metadata);
+  }
+
+  info(message: string, metadata?: Record<string, any>): void {
+    this.log(LogLevel.INFO, message, metadata);
+  }
+
+  warn(message: string, metadata?: Record<string, any>): void {
+    this.log(LogLevel.WARN, message, metadata);
+  }
+
+  error(message: string, metadata?: Record<string, any>): void {
+    this.log(LogLevel.ERROR, message, metadata);
+  }
+
+  fatal(message: string, metadata?: Record<string, any>): void {
+    this.log(LogLevel.FATAL, message, metadata);
+  }
+
+  private log(level: LogLevel, message: string, metadata?: Record<string, any>): void {
+    if (this.isShuttingDown) {
+      return;
+    }
+
+    const logEntry: LogEntry = {
+      id: uuidv4(),
+      timestamp: new Date(),
+      level,
+      message,
+      serviceName: this.config.serviceName,
+      agentId: this.config.agentId,
+      platform: 'express',
+      metadata: {
+        ...metadata,
+        nodeVersion: process.version,
+        pid: process.pid
+      },
+      deviceInfo: {
+        platform: 'Server',
+        version: process.version,
+        model: 'Node.js',
+        appVersion: process.env.npm_package_version || '1.0.0'
+      },
+      sourceLocation: this.getSourceLocation()
+    };
+
+    // Add to buffer (non-blocking)
+    if (this.highThroughputBuffer) {
+      this.highThroughputBuffer.add(logEntry);
+    } else {
+      this.buffer.add(logEntry);
+    }
+  }
+
+  private getSourceLocation(): any {
+    const stack = new Error().stack;
+    if (!stack) return undefined;
+
+    const lines = stack.split('\n');
+    // Skip the first few lines (Error, getSourceLocation, log method)
+    const callerLine = lines[4];
+    if (!callerLine) return undefined;
+
+    const match = callerLine.match(/at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/);
+    if (match) {
+      return {
+        function: match[1],
+        file: match[2],
+        line: parseInt(match[3])
+      };
+    }
+
+    return undefined;
+  }
+
+  private startFlushTimer(): void {
+    this.flushTimer = setInterval(() => {
+      this.flush().catch(err => {
+        console.error('Failed to flush logs:', err.message);
+      });
+    }, this.config.flushInterval);
+  }
+
+  private async flush(): Promise<void> {
+    const logs = this.highThroughputBuffer ? 
+      this.highThroughputBuffer.flush() : 
+      this.buffer.flush();
+      
+    if (logs.length === 0) {
+      return;
+    }
+
+    try {
+      await this.sendLogs(logs);
+    } catch (error) {
+      // Re-add logs to buffer for retry
+      if (this.highThroughputBuffer) {
+        logs.forEach(log => this.highThroughputBuffer!.add(log));
+      } else {
+        logs.forEach(log => this.buffer.add(log));
+      }
+      
+      // Track error in health checker
+      if (this.healthChecker) {
+        this.healthChecker.setLastError(error as Error);
+      }
+      
+      throw error;
+    }
+  }
+
+  private async sendLogs(logs: LogEntry[]): Promise<void> {
+    const { maxRetries, initialDelay, maxDelay, backoffMultiplier } = this.config.retryConfig;
+    let lastError: Error;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        await this.httpClient.post('/api/logs', { logs });
+        return;
+      } catch (error: any) {
+        lastError = error;
+        
+        if (attempt === maxRetries) {
+          break;
+        }
+
+        // Calculate delay with exponential backoff
+        const delay = Math.min(
+          initialDelay * Math.pow(backoffMultiplier, attempt),
+          maxDelay
+        );
+
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    throw lastError!;
+  }
+
+  private shutdownHandler?: () => Promise<void>;
+
+  private setupGracefulShutdown(): void {
+    this.shutdownHandler = async () => {
+      this.isShuttingDown = true;
+      
+      if (this.flushTimer) {
+        clearInterval(this.flushTimer);
+      }
+
+      try {
+        await this.flush();
+      } catch (error) {
+        console.error('Failed to flush logs during shutdown:', error);
+      }
+    };
+
+    process.on('SIGINT', this.shutdownHandler);
+    process.on('SIGTERM', this.shutdownHandler);
+    process.on('beforeExit', this.shutdownHandler);
+  }
+
+  getHealthChecker(): HealthChecker | undefined {
+    return this.healthChecker;
+  }
+
+  getBufferStats(): any {
+    if (this.highThroughputBuffer) {
+      return this.highThroughputBuffer.getStats();
+    }
+    return {
+      size: this.buffer.size(),
+      isFull: this.buffer.isFull()
+    };
+  }
+
+  async close(): Promise<void> {
+    this.isShuttingDown = true;
+    
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+    }
+
+    // Remove event listeners to prevent memory leaks
+    if (this.shutdownHandler) {
+      process.removeListener('SIGINT', this.shutdownHandler);
+      process.removeListener('SIGTERM', this.shutdownHandler);
+      process.removeListener('beforeExit', this.shutdownHandler);
+    }
+
+    await this.flush();
+  }
+}

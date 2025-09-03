@@ -1,0 +1,1 @@
+{"version":3,"file":"bunyan.d.ts","sourceRoot":"","sources":["../../src/adapters/bunyan.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,eAAe,EAAE,MAAM,UAAU,CAAC;AAE3C,qBAAa,eAAe;IAC1B,OAAO,CAAC,SAAS,CAAY;IACtB,IAAI,SAAS;gBAER,MAAM,EAAE,eAAe;IAInC,KAAK,CAAC,MAAM,EAAE,GAAG;IA2BjB,OAAO,CAAC,cAAc;IAShB,KAAK,IAAI,OAAO,CAAC,IAAI,CAAC;CAG7B;AAGD,wBAAgB,kBAAkB,CAAC,MAAM,EAAE,eAAe,mBAEzD"}

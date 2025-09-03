@@ -1,0 +1,26 @@
+server:
+  ingestion_port: 8080
+  mcp_port: 8081
+
+storage:
+  type: sqlite
+  connection_string: "./logs.db"
+  max_connections: 10
+
+retention:
+  default_days: 30
+  by_level:
+    DEBUG: 7
+    INFO: 30
+    WARN: 90
+    ERROR: 365
+    FATAL: 365
+
+indexing:
+  enabled: true
+  full_text_search: true
+
+buffer:
+  size: 10000
+  flush_timeout: 5s
+  max_batch_size: 100
