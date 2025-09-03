@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/mcp-logging-server/pkg/models"
 	"github.com/google/uuid"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 func TestSQLiteStorage_NewSQLiteStorage(t *testing.T) {
@@ -34,7 +34,7 @@ func TestSQLiteStorage_Store(t *testing.T) {
 	defer storage.Close()
 
 	ctx := context.Background()
-	
+
 	// Test storing single log entry
 	logs := []models.LogEntry{
 		{
@@ -90,7 +90,7 @@ func TestSQLiteStorage_StoreBatch(t *testing.T) {
 	defer storage.Close()
 
 	ctx := context.Background()
-	
+
 	// Test storing multiple log entries
 	logs := []models.LogEntry{
 		{
@@ -136,7 +136,7 @@ func TestSQLiteStorage_Query(t *testing.T) {
 	defer storage.Close()
 
 	ctx := context.Background()
-	
+
 	// Store test data
 	now := time.Now()
 	logs := []models.LogEntry{
@@ -233,7 +233,7 @@ func TestSQLiteStorage_GetByIDs(t *testing.T) {
 	defer storage.Close()
 
 	ctx := context.Background()
-	
+
 	// Store test data
 	logs := []models.LogEntry{
 		{
@@ -289,7 +289,7 @@ func TestSQLiteStorage_GetServices(t *testing.T) {
 	defer storage.Close()
 
 	ctx := context.Background()
-	
+
 	// Store test data
 	now := time.Now()
 	logs := []models.LogEntry{
@@ -364,7 +364,7 @@ func TestSQLiteStorage_HealthCheck(t *testing.T) {
 	defer storage.Close()
 
 	ctx := context.Background()
-	
+
 	health := storage.HealthCheck(ctx)
 	if health.Status != "healthy" {
 		t.Errorf("Expected healthy status, got %s", health.Status)
@@ -383,7 +383,7 @@ func TestSQLiteStorage_InvalidData(t *testing.T) {
 	defer storage.Close()
 
 	ctx := context.Background()
-	
+
 	// Test storing invalid log entry (missing required fields)
 	logs := []models.LogEntry{
 		{

@@ -375,7 +375,7 @@ The logs will include:
 #### Installation
 
 ```bash
-go get github.com/your-org/mcp-logging-go-sdk
+go get github.com/kerlexov/mcp-logging-go-sdk
 ```
 
 #### Basic Usage
@@ -385,7 +385,7 @@ package main
 
 import (
     "log"
-    "github.com/your-org/mcp-logging-go-sdk/pkg/logger"
+    "github.com/kerlexov/mcp-logging-go-sdk/pkg/logger"
 )
 
 func main() {

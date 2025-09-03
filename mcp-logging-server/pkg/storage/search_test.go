@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 func TestSearchService_NewSearchService(t *testing.T) {

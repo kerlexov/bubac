@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/your-org/mcp-logging-go-sdk/pkg/logger"
+	"github.com/kerlexov/mcp-logging-go-sdk/pkg/logger"
 )
 
 type StandardLogAdapter struct {

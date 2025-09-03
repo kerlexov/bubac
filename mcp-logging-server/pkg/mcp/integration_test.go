@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 // IntegrationTestStorage implements a more realistic storage for integration tests
@@ -17,14 +17,14 @@ type IntegrationTestStorage struct {
 
 func (its *IntegrationTestStorage) Store(ctx context.Context, logs []models.LogEntry) error {
 	its.logs = append(its.logs, logs...)
-	
+
 	// Update services list
 	serviceMap := make(map[string]*models.ServiceInfo)
 	for _, service := range its.services {
 		key := service.ServiceName + ":" + service.AgentID
 		serviceMap[key] = &service
 	}
-	
+
 	for _, log := range logs {
 		key := log.ServiceName + ":" + log.AgentID
 		if service, exists := serviceMap[key]; exists {
@@ -40,13 +40,13 @@ func (its *IntegrationTestStorage) Store(ctx context.Context, logs []models.LogE
 			})
 		}
 	}
-	
+
 	return nil
 }
 
 func (its *IntegrationTestStorage) Query(ctx context.Context, filter models.LogFilter) (*models.LogResult, error) {
 	var filteredLogs []models.LogEntry
-	
+
 	for _, log := range its.logs {
 		if filter.ServiceName != "" && log.ServiceName != filter.ServiceName {
 			continue
@@ -69,35 +69,35 @@ func (its *IntegrationTestStorage) Query(ctx context.Context, filter models.LogF
 		if !filter.EndTime.IsZero() && log.Timestamp.After(filter.EndTime) {
 			continue
 		}
-		
+
 		filteredLogs = append(filteredLogs, log)
 	}
-	
+
 	totalCount := len(filteredLogs)
-	
+
 	// Apply pagination
 	start := filter.Offset
 	if start > totalCount {
 		start = totalCount
 	}
-	
+
 	limit := filter.Limit
 	if limit <= 0 {
 		limit = 100
 	}
-	
+
 	end := start + limit
 	if end > totalCount {
 		end = totalCount
 	}
-	
+
 	var resultLogs []models.LogEntry
 	if start < totalCount {
 		resultLogs = filteredLogs[start:end]
 	}
-	
+
 	hasMore := end < totalCount
-	
+
 	return &models.LogResult{
 		Logs:       resultLogs,
 		TotalCount: totalCount,
@@ -139,7 +139,7 @@ func (its *IntegrationTestStorage) Close() error {
 }
 
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(substr) > 0 && findSubstring(s, substr)))
 }
 
@@ -204,7 +204,7 @@ func TestMCPServerIntegration(t *testing.T) {
 			ID:      "init-1",
 			Method:  "initialize",
 		}
-		
+
 		initResponse := server.handleMessage(ctx, initMsg)
 		if initResponse.Error != nil {
 			t.Fatalf("Initialize failed: %v", initResponse.Error)
@@ -216,7 +216,7 @@ func TestMCPServerIntegration(t *testing.T) {
 			ID:      "tools-1",
 			Method:  "tools/list",
 		}
-		
+
 		toolsResponse := server.handleMessage(ctx, toolsMsg)
 		if toolsResponse.Error != nil {
 			t.Fatalf("Tools list failed: %v", toolsResponse.Error)
@@ -231,13 +231,13 @@ func TestMCPServerIntegration(t *testing.T) {
 			"get_service_status": false,
 			"list_services":      false,
 		}
-		
+
 		for _, tool := range tools {
 			if _, exists := expectedTools[tool.Name]; exists {
 				expectedTools[tool.Name] = true
 			}
 		}
-		
+
 		for toolName, found := range expectedTools {
 			if !found {
 				t.Errorf("Expected tool %s not found", toolName)
@@ -456,8 +456,8 @@ func TestMCPServerFieldMaskingIntegration(t *testing.T) {
 			AgentID:     "sensitive-agent-123",
 			Platform:    models.PlatformGo,
 			Metadata: map[string]interface{}{
-				"user_id":    "user-sensitive-456",
-				"api_key":    "secret-key-789",
+				"user_id":     "user-sensitive-456",
+				"api_key":     "secret-key-789",
 				"public_info": "this-is-public",
 			},
 		},
@@ -500,7 +500,7 @@ func TestMCPServerFieldMaskingIntegration(t *testing.T) {
 		}
 
 		log := logs[0].(map[string]interface{})
-		
+
 		// Verify message is masked
 		message := log["message"].(string)
 		if message == "Sensitive user data processed" {
@@ -558,7 +558,7 @@ func TestMCPServerFieldMaskingIntegration(t *testing.T) {
 		}
 
 		log := logs[0]
-		
+
 		// Verify api_key is masked
 		apiKey := log.Metadata["api_key"].(string)
 		if apiKey == "secret-key-789" {
@@ -578,10 +578,10 @@ func TestMCPServerErrorHandling(t *testing.T) {
 	ctx := context.Background()
 
 	errorTests := []struct {
-		name           string
-		message        *MCPMessage
-		expectedError  int
-		expectedMsg    string
+		name          string
+		message       *MCPMessage
+		expectedError int
+		expectedMsg   string
 	}{
 		{
 			name: "unknown_method",
@@ -635,7 +635,7 @@ func TestMCPServerErrorHandling(t *testing.T) {
 	for _, et := range errorTests {
 		t.Run(et.name, func(t *testing.T) {
 			response := server.handleMessage(ctx, et.message)
-			
+
 			if response.Error == nil {
 				t.Fatal("Expected error but got none")
 			}

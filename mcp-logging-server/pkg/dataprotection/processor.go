@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 // ActionType represents the type of data protection action
@@ -31,9 +31,9 @@ type FieldRule struct {
 type DataProtectionConfig struct {
 	Enabled      bool        `yaml:"enabled" json:"enabled"`
 	FieldRules   []FieldRule `yaml:"field_rules" json:"field_rules"`
-	MaskFields   []string    `yaml:"mask_fields" json:"mask_fields"`     // Deprecated: use FieldRules
-	HashFields   []string    `yaml:"hash_fields" json:"hash_fields"`     // Deprecated: use FieldRules
-	DropFields   []string    `yaml:"drop_fields" json:"drop_fields"`     // Deprecated: use FieldRules
+	MaskFields   []string    `yaml:"mask_fields" json:"mask_fields"` // Deprecated: use FieldRules
+	HashFields   []string    `yaml:"hash_fields" json:"hash_fields"` // Deprecated: use FieldRules
+	DropFields   []string    `yaml:"drop_fields" json:"drop_fields"` // Deprecated: use FieldRules
 	MaskChar     string      `yaml:"mask_char" json:"mask_char"`
 	HashSalt     string      `yaml:"hash_salt" json:"hash_salt"`
 	AuditEnabled bool        `yaml:"audit_enabled" json:"audit_enabled"`
@@ -75,12 +75,12 @@ func NewDataProtectionProcessor(config *DataProtectionConfig) (*DataProtectionPr
 	if config == nil {
 		config = DefaultDataProtectionConfig()
 	}
-	
+
 	processor := &DataProtectionProcessor{
 		config:   config,
 		patterns: make(map[string]*regexp.Regexp),
 	}
-	
+
 	// Compile regex patterns
 	for _, rule := range config.FieldRules {
 		if rule.Pattern != "" {
@@ -91,12 +91,12 @@ func NewDataProtectionProcessor(config *DataProtectionConfig) (*DataProtectionPr
 			processor.patterns[rule.Field] = pattern
 		}
 	}
-	
+
 	// Initialize audit logger if enabled
 	if config.AuditEnabled {
 		processor.auditLogger = NewAuditLogger()
 	}
-	
+
 	return processor, nil
 }
 
@@ -105,10 +105,10 @@ func (p *DataProtectionProcessor) ProcessLogEntry(entry *models.LogEntry) error 
 	if !p.config.Enabled {
 		return nil
 	}
-	
+
 	originalEntry := *entry // Copy for audit
 	actionsPerformed := make([]AuditAction, 0)
-	
+
 	// Process metadata fields
 	if entry.Metadata != nil {
 		for field, value := range entry.Metadata {
@@ -116,19 +116,19 @@ func (p *DataProtectionProcessor) ProcessLogEntry(entry *models.LogEntry) error 
 			if action == "" {
 				continue
 			}
-			
+
 			originalValue := fmt.Sprintf("%v", value)
 			newValue, err := p.applyAction(field, originalValue, action)
 			if err != nil {
 				return fmt.Errorf("failed to apply action %s to field %s: %w", action, field, err)
 			}
-			
+
 			if action == ActionDrop {
 				delete(entry.Metadata, field)
 			} else {
 				entry.Metadata[field] = newValue
 			}
-			
+
 			// Record audit action
 			if p.auditLogger != nil {
 				actionsPerformed = append(actionsPerformed, AuditAction{
@@ -140,7 +140,7 @@ func (p *DataProtectionProcessor) ProcessLogEntry(entry *models.LogEntry) error 
 			}
 		}
 	}
-	
+
 	// Process message field for sensitive patterns
 	if entry.Message != "" {
 		processedMessage, messageActions := p.processMessageContent(entry.Message)
@@ -149,7 +149,7 @@ func (p *DataProtectionProcessor) ProcessLogEntry(entry *models.LogEntry) error 
 			actionsPerformed = append(actionsPerformed, messageActions...)
 		}
 	}
-	
+
 	// Log audit information
 	if p.auditLogger != nil && len(actionsPerformed) > 0 {
 		auditEntry := AuditEntry{
@@ -161,40 +161,40 @@ func (p *DataProtectionProcessor) ProcessLogEntry(entry *models.LogEntry) error 
 		}
 		p.auditLogger.LogAuditEntry(auditEntry)
 	}
-	
+
 	return nil
 }
 
 // getActionForField determines the action to take for a specific field
 func (p *DataProtectionProcessor) getActionForField(field string) ActionType {
 	fieldLower := strings.ToLower(field)
-	
+
 	// Check field rules first
 	for _, rule := range p.config.FieldRules {
 		if strings.ToLower(rule.Field) == fieldLower {
 			return rule.Action
 		}
 	}
-	
+
 	// Check backward compatibility fields
 	for _, maskField := range p.config.MaskFields {
 		if strings.ToLower(maskField) == fieldLower {
 			return ActionMask
 		}
 	}
-	
+
 	for _, hashField := range p.config.HashFields {
 		if strings.ToLower(hashField) == fieldLower {
 			return ActionHash
 		}
 	}
-	
+
 	for _, dropField := range p.config.DropFields {
 		if strings.ToLower(dropField) == fieldLower {
 			return ActionDrop
 		}
 	}
-	
+
 	return ""
 }
 
@@ -227,7 +227,7 @@ func (p *DataProtectionProcessor) maskValue(field, value string) string {
 			return p.maskString(match)
 		})
 	}
-	
+
 	return p.maskString(value)
 }
 
@@ -236,12 +236,12 @@ func (p *DataProtectionProcessor) maskString(value string) string {
 	if len(value) <= 4 {
 		return strings.Repeat(p.config.MaskChar, len(value))
 	}
-	
+
 	// Show first and last 2 characters, mask the middle
 	prefix := value[:2]
 	suffix := value[len(value)-2:]
 	middle := strings.Repeat(p.config.MaskChar, len(value)-4)
-	
+
 	return prefix + middle + suffix
 }
 
@@ -256,7 +256,7 @@ func (p *DataProtectionProcessor) hashValue(value string) string {
 func (p *DataProtectionProcessor) processMessageContent(message string) (string, []AuditAction) {
 	actions := make([]AuditAction, 0)
 	processedMessage := message
-	
+
 	// Common sensitive patterns
 	patterns := map[string]*regexp.Regexp{
 		"credit_card": regexp.MustCompile(`\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b`),
@@ -265,13 +265,13 @@ func (p *DataProtectionProcessor) processMessageContent(message string) (string,
 		"phone":       regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`),
 		"ip_address":  regexp.MustCompile(`\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`),
 	}
-	
+
 	for patternName, pattern := range patterns {
 		matches := pattern.FindAllString(processedMessage, -1)
 		for _, match := range matches {
 			masked := p.maskString(match)
 			processedMessage = strings.Replace(processedMessage, match, masked, -1)
-			
+
 			actions = append(actions, AuditAction{
 				Field:         "message:" + patternName,
 				Action:        ActionMask,
@@ -280,7 +280,7 @@ func (p *DataProtectionProcessor) processMessageContent(message string) (string,
 			})
 		}
 	}
-	
+
 	return processedMessage, actions
 }
 
@@ -302,16 +302,16 @@ func (p *DataProtectionProcessor) UpdateConfig(config *DataProtectionConfig) err
 			patterns[rule.Field] = pattern
 		}
 	}
-	
+
 	p.config = config
 	p.patterns = patterns
-	
+
 	// Update audit logger
 	if config.AuditEnabled && p.auditLogger == nil {
 		p.auditLogger = NewAuditLogger()
 	} else if !config.AuditEnabled {
 		p.auditLogger = nil
 	}
-	
+
 	return nil
 }

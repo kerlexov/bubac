@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/your-org/mcp-logging-go-sdk/pkg/logger"
+	"github.com/kerlexov/mcp-logging-go-sdk/pkg/logger"
 )
 
 func main() {

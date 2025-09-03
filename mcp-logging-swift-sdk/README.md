@@ -34,14 +34,14 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/your-org/mcp-logging-swift-sdk.git", from: "1.0.0")
+    .package(url: "https://github.com/kerlexov/mcp-logging-swift-sdk.git", from: "1.0.0")
 ]
 ```
 
 Or add it through Xcode:
 
 1. File → Add Package Dependencies
-2. Enter: `https://github.com/your-org/mcp-logging-swift-sdk.git`
+2. Enter: `https://github.com/kerlexov/mcp-logging-swift-sdk.git`
 3. Select version and add to target
 
 ## Quick Start
@@ -430,6 +430,6 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/your-org/mcp-logging-swift-sdk/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/mcp-logging-swift-sdk/discussions)
-- **Documentation**: [Full Documentation](https://your-org.github.io/mcp-logging-swift-sdk/)
+- **Issues**: [GitHub Issues](https://github.com/kerlexov/mcp-logging-swift-sdk/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/kerlexov/mcp-logging-swift-sdk/discussions)
+- **Documentation**: [Full Documentation](https://kerlexov.github.io/mcp-logging-swift-sdk/)

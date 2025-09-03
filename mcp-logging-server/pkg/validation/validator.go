@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 // LogValidator provides comprehensive validation for log entries
@@ -18,13 +18,13 @@ type LogValidator struct {
 // NewLogValidator creates a new log validator
 func NewLogValidator() *LogValidator {
 	v := validator.New()
-	
+
 	// Register custom validators
 	v.RegisterValidation("service_name", validateServiceName)
 	v.RegisterValidation("agent_id", validateAgentID)
 	v.RegisterValidation("log_message", validateLogMessage)
 	v.RegisterValidation("metadata_size", validateMetadataSize)
-	
+
 	return &LogValidator{
 		validator: v,
 	}
@@ -36,7 +36,7 @@ func (lv *LogValidator) ValidateLogEntry(entry *models.LogEntry) *ValidationResu
 		IsValid: true,
 		Errors:  make([]ValidationError, 0),
 	}
-	
+
 	// Basic struct validation
 	if err := lv.validator.Struct(entry); err != nil {
 		if validationErrors, ok := err.(validator.ValidationErrors); ok {
@@ -49,10 +49,10 @@ func (lv *LogValidator) ValidateLogEntry(entry *models.LogEntry) *ValidationResu
 			}
 		}
 	}
-	
+
 	// Custom business logic validation
 	lv.validateBusinessRules(entry, result)
-	
+
 	result.IsValid = len(result.Errors) == 0
 	return result
 }
@@ -64,7 +64,7 @@ func (lv *LogValidator) ValidateLogBatch(entries []models.LogEntry) *BatchValida
 		ValidEntries:   make([]models.LogEntry, 0),
 		InvalidEntries: make([]InvalidEntry, 0),
 	}
-	
+
 	for i, entry := range entries {
 		validationResult := lv.ValidateLogEntry(&entry)
 		if validationResult.IsValid {
@@ -77,10 +77,10 @@ func (lv *LogValidator) ValidateLogBatch(entries []models.LogEntry) *BatchValida
 			})
 		}
 	}
-	
+
 	result.ValidCount = len(result.ValidEntries)
 	result.InvalidCount = len(result.InvalidEntries)
-	
+
 	return result
 }
 
@@ -99,11 +99,11 @@ type ValidationError struct {
 
 // BatchValidationResult represents the result of validating a batch of log entries
 type BatchValidationResult struct {
-	TotalEntries   int            `json:"total_entries"`
-	ValidCount     int            `json:"valid_count"`
-	InvalidCount   int            `json:"invalid_count"`
+	TotalEntries   int               `json:"total_entries"`
+	ValidCount     int               `json:"valid_count"`
+	InvalidCount   int               `json:"invalid_count"`
 	ValidEntries   []models.LogEntry `json:"valid_entries"`
-	InvalidEntries []InvalidEntry `json:"invalid_entries"`
+	InvalidEntries []InvalidEntry    `json:"invalid_entries"`
 }
 
 // InvalidEntry represents an invalid log entry with its errors
@@ -123,7 +123,7 @@ func (lv *LogValidator) validateBusinessRules(entry *models.LogEntry, result *Va
 			Message: "Timestamp cannot be more than 5 minutes in the future",
 		})
 	}
-	
+
 	// Validate timestamp is not too old (more than 1 year)
 	if entry.Timestamp.Before(time.Now().Add(-365 * 24 * time.Hour)) {
 		result.Errors = append(result.Errors, ValidationError{
@@ -132,7 +132,7 @@ func (lv *LogValidator) validateBusinessRules(entry *models.LogEntry, result *Va
 			Message: "Timestamp cannot be more than 1 year in the past",
 		})
 	}
-	
+
 	// Validate metadata size
 	if entry.Metadata != nil && len(entry.Metadata) > 50 {
 		result.Errors = append(result.Errors, ValidationError{
@@ -141,7 +141,7 @@ func (lv *LogValidator) validateBusinessRules(entry *models.LogEntry, result *Va
 			Message: "Metadata cannot have more than 50 keys",
 		})
 	}
-	
+
 	// Validate stack trace size
 	if len(entry.StackTrace) > 50000 {
 		result.Errors = append(result.Errors, ValidationError{

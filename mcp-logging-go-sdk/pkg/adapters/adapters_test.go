@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kerlexov/mcp-logging-go-sdk/pkg/logger"
 	"github.com/sirupsen/logrus"
-	"github.com/your-org/mcp-logging-go-sdk/pkg/logger"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -200,20 +200,20 @@ func TestLogrusHook(t *testing.T) {
 
 func TestLogrusInstallHook(t *testing.T) {
 	mockLog := newMockLogger()
-	
+
 	// Install the hook
 	InstallLogrusHook(mockLog)
-	
+
 	// Create a new logrus logger to test
 	testLogger := logrus.New()
 	testLogger.SetOutput(&bytes.Buffer{}) // Suppress output
-	
+
 	// Log a message
 	testLogger.Info("Test message from logrus")
-	
+
 	// Give some time for async processing
 	time.Sleep(10 * time.Millisecond)
-	
+
 	// Note: This test might not work as expected because InstallLogrusHook
 	// adds to the global logrus instance, not our test logger
 	// In a real scenario, you'd want to add the hook to specific logger instances
@@ -233,7 +233,7 @@ func TestZapCore(t *testing.T) {
 		{Key: "key1", Type: zapcore.StringType, String: "value1"},
 		{Key: "key2", Type: zapcore.Int64Type, Integer: 42},
 	}
-	
+
 	newCore := core.With(fields)
 	if newCore == nil {
 		t.Error("Expected new core with fields to be created")
@@ -244,7 +244,7 @@ func TestZapCore(t *testing.T) {
 		Level:   zapcore.InfoLevel,
 		Message: "Test zap message",
 	}
-	
+
 	err := core.Write(entry, fields)
 	if err != nil {
 		t.Errorf("Expected no error writing to core, got %v", err)

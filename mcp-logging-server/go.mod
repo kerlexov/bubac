@@ -1,4 +1,4 @@
-module github.com/your-org/mcp-logging-server
+module github.com/kerlexov/mcp-logging-server
 
 go 1.23
 

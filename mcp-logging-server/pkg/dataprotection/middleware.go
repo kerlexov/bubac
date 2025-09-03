@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 // DataProtectionMiddleware creates middleware for data protection
@@ -21,13 +21,13 @@ func ProcessLogEntries(processor *DataProtectionProcessor, entries []models.LogE
 	if processor == nil || !processor.GetConfig().Enabled {
 		return nil
 	}
-	
+
 	for i := range entries {
 		if err := processor.ProcessLogEntry(&entries[i]); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -64,7 +64,7 @@ func AdminDataProtectionMiddleware(processor *DataProtectionProcessor, statsColl
 				return
 			}
 		}
-		
+
 		c.Next()
 	}
 }
@@ -82,23 +82,23 @@ func handleUpdateDataProtectionConfig(c *gin.Context, processor *DataProtectionP
 	var newConfig DataProtectionConfig
 	if err := c.ShouldBindJSON(&newConfig); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid configuration",
+			"error":   "Invalid configuration",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	if err := processor.UpdateConfig(&newConfig); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to update configuration",
+			"error":   "Failed to update configuration",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Configuration updated successfully",
-		"config": newConfig,
+		"config":  newConfig,
 	})
 }
 
@@ -110,7 +110,7 @@ func handleGetDataProtectionStats(c *gin.Context, statsCollector *AuditStatsColl
 		})
 		return
 	}
-	
+
 	stats := statsCollector.GetStats()
 	c.JSON(http.StatusOK, gin.H{
 		"stats": stats,
@@ -122,31 +122,31 @@ func handleTestDataProtection(c *gin.Context, processor *DataProtectionProcessor
 	var request struct {
 		LogEntry models.LogEntry `json:"log_entry" binding:"required"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
+			"error":   "Invalid request",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	// Create a copy for testing
 	originalEntry := request.LogEntry
 	testEntry := request.LogEntry
-	
+
 	// Process the test entry
 	if err := processor.ProcessLogEntry(&testEntry); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to process log entry",
+			"error":   "Failed to process log entry",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"original": originalEntry,
+		"original":  originalEntry,
 		"processed": testEntry,
-		"config": processor.GetConfig(),
+		"config":    processor.GetConfig(),
 	})
 }

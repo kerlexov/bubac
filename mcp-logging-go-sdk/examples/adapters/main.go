@@ -4,9 +4,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/kerlexov/mcp-logging-go-sdk/pkg/adapters"
+	"github.com/kerlexov/mcp-logging-go-sdk/pkg/logger"
 	"github.com/sirupsen/logrus"
-	"github.com/your-org/mcp-logging-go-sdk/pkg/adapters"
-	"github.com/your-org/mcp-logging-go-sdk/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +29,7 @@ func main() {
 	log.Println("\n1. Standard Log Adapter:")
 	standardAdapter := adapters.NewStandardLogAdapter(mcpLogger)
 	log.SetOutput(standardAdapter.GetWriter())
-	
+
 	log.Println("This message goes through standard log adapter")
 	log.Printf("Formatted message with value: %d", 42)
 
@@ -38,23 +38,23 @@ func main() {
 	logrusLogger := logrus.New()
 	logrusHook := adapters.NewLogrusHook(mcpLogger)
 	logrusLogger.AddHook(logrusHook)
-	
+
 	logrusLogger.WithFields(logrus.Fields{
 		"user_id": "123",
 		"action":  "login",
 	}).Info("User logged in via logrus")
-	
+
 	logrusLogger.WithField("error_code", "E001").Error("Error occurred via logrus")
 
 	// 3. Zap adapter
 	log.Println("\n3. Zap Adapter:")
 	zapLogger := adapters.NewZapLogger(mcpLogger)
-	
+
 	zapLogger.Info("Info message via zap",
 		zap.String("component", "auth"),
 		zap.Int("user_id", 456),
 	)
-	
+
 	zapLogger.Error("Error message via zap",
 		zap.String("error", "connection failed"),
 		zap.Duration("timeout", 30*time.Second),
@@ -63,12 +63,12 @@ func main() {
 	// 4. Zap sugared logger
 	log.Println("\n4. Zap Sugared Logger:")
 	sugaredLogger := adapters.NewZapSugaredLogger(mcpLogger)
-	
+
 	sugaredLogger.Infow("Sugared info message",
 		"key1", "value1",
 		"key2", 789,
 	)
-	
+
 	sugaredLogger.Errorw("Sugared error message",
 		"error", "database connection failed",
 		"retry_count", 3,
@@ -77,7 +77,7 @@ func main() {
 	// 5. Global logrus hook installation
 	log.Println("\n5. Global Logrus Hook:")
 	adapters.InstallLogrusHook(mcpLogger)
-	
+
 	// Now any logrus usage will automatically send to MCP
 	logrus.WithField("global", true).Info("This uses the global logrus hook")
 
@@ -86,11 +86,11 @@ func main() {
 	formatterLogger := logrus.New()
 	formatter := adapters.NewLogrusFormatter(mcpLogger, &logrus.TextFormatter{})
 	formatterLogger.SetFormatter(formatter)
-	
+
 	formatterLogger.Info("Message via logrus formatter")
 
 	// Wait for logs to be sent
 	time.Sleep(2 * time.Second)
-	
+
 	log.Println("\n=== All adapter examples completed ===")
 }

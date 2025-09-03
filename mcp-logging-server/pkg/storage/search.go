@@ -10,7 +10,7 @@ import (
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/mapping"
 	"github.com/blevesearch/bleve/v2/search/query"
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 // SearchableLogEntry represents a log entry optimized for search indexing
@@ -138,14 +138,14 @@ func (s *SearchService) IndexLogEntry(logEntry models.LogEntry) error {
 // IndexLogEntries adds or updates multiple log entries in the search index
 func (s *SearchService) IndexLogEntries(logEntries []models.LogEntry) error {
 	batch := s.index.NewBatch()
-	
+
 	for _, logEntry := range logEntries {
 		searchableEntry := s.convertToSearchable(logEntry)
 		if err := batch.Index(logEntry.ID, searchableEntry); err != nil {
 			return fmt.Errorf("failed to add log entry %s to batch: %w", logEntry.ID, err)
 		}
 	}
-	
+
 	return s.index.Batch(batch)
 }
 
@@ -153,7 +153,7 @@ func (s *SearchService) IndexLogEntries(logEntries []models.LogEntry) error {
 func (s *SearchService) SearchLogs(ctx context.Context, query string, filter models.LogFilter) ([]string, error) {
 	// Build search query
 	searchQuery := s.buildSearchQuery(query, filter)
-	
+
 	// Create search request
 	searchRequest := bleve.NewSearchRequest(searchQuery)
 	searchRequest.Size = filter.Limit
@@ -164,74 +164,74 @@ func (s *SearchService) SearchLogs(ctx context.Context, query string, filter mod
 	if filter.Offset < 0 {
 		searchRequest.From = 0
 	}
-	
+
 	// Sort by timestamp descending
 	searchRequest.SortBy([]string{"-timestamp"})
-	
+
 	// Execute search
 	searchResult, err := s.index.Search(searchRequest)
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}
-	
+
 	// Extract log IDs from search results
 	var logIDs []string
 	for _, hit := range searchResult.Hits {
 		logIDs = append(logIDs, hit.ID)
 	}
-	
+
 	return logIDs, nil
 }
 
 // buildSearchQuery constructs a Bleve query based on search text and filters
 func (s *SearchService) buildSearchQuery(queryText string, filter models.LogFilter) query.Query {
 	var queries []query.Query
-	
+
 	// Full-text search query
 	if queryText != "" {
 		// Search in message and stack trace fields
 		messageQuery := bleve.NewMatchQuery(queryText)
 		messageQuery.SetField("message")
-		
+
 		stackTraceQuery := bleve.NewMatchQuery(queryText)
 		stackTraceQuery.SetField("stack_trace")
-		
+
 		textQuery := bleve.NewDisjunctionQuery(messageQuery, stackTraceQuery)
 		queries = append(queries, textQuery)
 	}
-	
+
 	// Filter by service name
 	if filter.ServiceName != "" {
 		serviceQuery := bleve.NewTermQuery(filter.ServiceName)
 		serviceQuery.SetField("service_name")
 		queries = append(queries, serviceQuery)
 	}
-	
+
 	// Filter by agent ID
 	if filter.AgentID != "" {
 		agentQuery := bleve.NewTermQuery(filter.AgentID)
 		agentQuery.SetField("agent_id")
 		queries = append(queries, agentQuery)
 	}
-	
+
 	// Filter by level
 	if filter.Level != "" {
 		levelQuery := bleve.NewTermQuery(string(filter.Level))
 		levelQuery.SetField("level")
 		queries = append(queries, levelQuery)
 	}
-	
+
 	// Filter by platform
 	if filter.Platform != "" {
 		platformQuery := bleve.NewTermQuery(string(filter.Platform))
 		platformQuery.SetField("platform")
 		queries = append(queries, platformQuery)
 	}
-	
+
 	// Filter by time range
 	if !filter.StartTime.IsZero() || !filter.EndTime.IsZero() {
 		var timeQuery *query.DateRangeQuery
-		
+
 		if !filter.StartTime.IsZero() && !filter.EndTime.IsZero() {
 			// Both start and end times specified
 			timeQuery = bleve.NewDateRangeQuery(filter.StartTime, filter.EndTime)
@@ -244,21 +244,21 @@ func (s *SearchService) buildSearchQuery(queryText string, filter models.LogFilt
 			epoch := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 			timeQuery = bleve.NewDateRangeQuery(epoch, filter.EndTime)
 		}
-		
+
 		timeQuery.SetField("timestamp")
 		queries = append(queries, timeQuery)
 	}
-	
+
 	// If no queries, return match all
 	if len(queries) == 0 {
 		return bleve.NewMatchAllQuery()
 	}
-	
+
 	// If only one query, return it directly
 	if len(queries) == 1 {
 		return queries[0]
 	}
-	
+
 	// Combine all queries with AND
 	return bleve.NewConjunctionQuery(queries...)
 }
@@ -276,19 +276,19 @@ func (s *SearchService) convertToSearchable(logEntry models.LogEntry) Searchable
 		Metadata:    logEntry.Metadata,
 		StackTrace:  logEntry.StackTrace,
 	}
-	
+
 	// Extract device information
 	if logEntry.DeviceInfo != nil {
 		searchable.DevicePlatform = logEntry.DeviceInfo.Platform
 		searchable.DeviceModel = logEntry.DeviceInfo.Model
 	}
-	
+
 	// Extract source location information
 	if logEntry.SourceLocation != nil {
 		searchable.SourceFile = logEntry.SourceLocation.File
 		searchable.SourceFunction = logEntry.SourceLocation.Function
 	}
-	
+
 	return searchable
 }
 
@@ -300,20 +300,20 @@ func (s *SearchService) DeleteLogEntry(id string) error {
 // GetIndexStats returns statistics about the search index
 func (s *SearchService) GetIndexStats() (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
-	
+
 	// Get document count
 	docCount, err := s.index.DocCount()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get document count: %w", err)
 	}
 	stats["document_count"] = docCount
-	
+
 	// Get index size (approximate)
 	if indexImpl, ok := s.index.(interface{ StatsMap() map[string]interface{} }); ok {
 		indexStats := indexImpl.StatsMap()
 		stats["index_stats"] = indexStats
 	}
-	
+
 	return stats, nil
 }
 
@@ -329,7 +329,7 @@ func (s *SearchService) HealthCheck(ctx context.Context) models.HealthStatus {
 		Timestamp: time.Now(),
 		Details:   make(map[string]string),
 	}
-	
+
 	// Check if index is accessible
 	docCount, err := s.index.DocCount()
 	if err != nil {
@@ -337,9 +337,9 @@ func (s *SearchService) HealthCheck(ctx context.Context) models.HealthStatus {
 		status.Details["index"] = fmt.Sprintf("failed to get document count: %v", err)
 		return status
 	}
-	
+
 	status.Details["index"] = "accessible"
 	status.Details["document_count"] = strconv.FormatUint(docCount, 10)
-	
+
 	return status
 }

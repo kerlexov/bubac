@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/your-org/mcp-logging-server/pkg/auth"
+	"github.com/kerlexov/mcp-logging-server/pkg/auth"
 )
 
 // RateLimitMiddleware creates a Gin middleware for rate limiting
@@ -17,17 +17,17 @@ func RateLimitMiddleware(rateLimiter *RateLimiter) gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		
+
 		// Get client IP
 		clientIP := c.ClientIP()
-		
+
 		// Check IP-based rate limit first
 		ipAllowed, ipInfo := rateLimiter.AllowIP(clientIP)
 		if !ipAllowed {
 			handleRateLimitExceeded(c, ipInfo, "IP")
 			return
 		}
-		
+
 		// Check API key-based rate limit if authenticated
 		if keyInfo, exists := auth.GetAPIKeyInfo(c); exists {
 			if apiKey, hasKey := auth.GetAPIKey(c); hasKey {
@@ -36,21 +36,21 @@ func RateLimitMiddleware(rateLimiter *RateLimiter) gin.HandlerFunc {
 				if customLimit <= 0 {
 					customLimit = 1000 // Default
 				}
-				
+
 				keyAllowed, keyInfo := rateLimiter.AllowAPIKey(apiKey, customLimit)
 				if !keyAllowed {
 					handleRateLimitExceeded(c, keyInfo, "API_KEY")
 					return
 				}
-				
+
 				// Add API key rate limit headers
 				addRateLimitHeaders(c, keyInfo, "API-Key")
 			}
 		}
-		
+
 		// Add IP rate limit headers
 		addRateLimitHeaders(c, ipInfo, "IP")
-		
+
 		c.Next()
 	}
 }
@@ -59,7 +59,7 @@ func RateLimitMiddleware(rateLimiter *RateLimiter) gin.HandlerFunc {
 func handleRateLimitExceeded(c *gin.Context, info *RateLimitInfo, limitType string) {
 	// Add rate limit headers
 	addRateLimitHeaders(c, info, limitType)
-	
+
 	// Calculate retry after
 	var retryAfter int
 	if info.Blocked {
@@ -67,23 +67,23 @@ func handleRateLimitExceeded(c *gin.Context, info *RateLimitInfo, limitType stri
 	} else {
 		retryAfter = int(time.Until(info.ResetTime).Seconds())
 	}
-	
+
 	if retryAfter < 0 {
 		retryAfter = 60 // Default to 1 minute
 	}
-	
+
 	c.Header("Retry-After", strconv.Itoa(retryAfter))
-	
+
 	response := gin.H{
 		"error": "Rate limit exceeded",
 		"code":  "RATE_LIMIT_EXCEEDED",
 		"details": gin.H{
-			"limit_type":   limitType,
-			"retry_after":  retryAfter,
-			"blocked":      info.Blocked,
+			"limit_type":  limitType,
+			"retry_after": retryAfter,
+			"blocked":     info.Blocked,
 		},
 	}
-	
+
 	if info.Blocked {
 		response["message"] = "Too many violations. Temporarily blocked."
 		response["details"].(gin.H)["blocked_until"] = info.BlockedUntil
@@ -92,7 +92,7 @@ func handleRateLimitExceeded(c *gin.Context, info *RateLimitInfo, limitType stri
 		response["message"] = "Rate limit exceeded. Please slow down."
 		c.JSON(http.StatusTooManyRequests, response)
 	}
-	
+
 	c.Abort()
 }
 
@@ -100,7 +100,7 @@ func handleRateLimitExceeded(c *gin.Context, info *RateLimitInfo, limitType stri
 func addRateLimitHeaders(c *gin.Context, info *RateLimitInfo, prefix string) {
 	c.Header("X-RateLimit-"+prefix+"-Remaining", strconv.Itoa(info.Remaining))
 	c.Header("X-RateLimit-"+prefix+"-Reset", strconv.FormatInt(info.ResetTime.Unix(), 10))
-	
+
 	if info.Blocked {
 		c.Header("X-RateLimit-"+prefix+"-Blocked", "true")
 		c.Header("X-RateLimit-"+prefix+"-Blocked-Until", strconv.FormatInt(info.BlockedUntil.Unix(), 10))
@@ -133,7 +133,7 @@ func AdminRateLimitMiddleware(rateLimiter *RateLimiter) gin.HandlerFunc {
 				return
 			}
 		}
-		
+
 		c.Next()
 	}
 }
@@ -167,25 +167,25 @@ func handleUnblock(c *gin.Context, rateLimiter *RateLimiter) {
 	var request struct {
 		Key string `json:"key" binding:"required"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
+			"error":   "Invalid request",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	success := rateLimiter.UnblockKey(request.Key)
 	if success {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Key unblocked successfully",
-			"key": request.Key,
+			"key":     request.Key,
 		})
 	} else {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Key not found in blocked list",
-			"key": request.Key,
+			"key":   request.Key,
 		})
 	}
 }

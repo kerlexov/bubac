@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 // MockStorage implements storage.LogStorage for testing
@@ -23,31 +23,31 @@ func (m *MockStorage) Store(ctx context.Context, logs []models.LogEntry) error {
 func (m *MockStorage) Query(ctx context.Context, filter models.LogFilter) (*models.LogResult, error) {
 	// Simple mock implementation - return all logs for testing with proper pagination
 	totalCount := len(m.logs)
-	
+
 	// Apply offset
 	start := filter.Offset
 	if start > totalCount {
 		start = totalCount
 	}
-	
+
 	// Apply limit
 	limit := filter.Limit
 	if limit <= 0 {
 		limit = 100 // default limit
 	}
-	
+
 	end := start + limit
 	if end > totalCount {
 		end = totalCount
 	}
-	
+
 	var resultLogs []models.LogEntry
 	if start < totalCount {
 		resultLogs = m.logs[start:end]
 	}
-	
+
 	hasMore := end < totalCount
-	
+
 	return &models.LogResult{
 		Logs:       resultLogs,
 		TotalCount: totalCount,
@@ -287,7 +287,7 @@ func TestHandleQueryLogsWithFieldMasking(t *testing.T) {
 	}
 
 	logEntry := logs[0].(map[string]interface{})
-	
+
 	// Check that message is masked
 	message := logEntry["message"].(string)
 	if message == "Sensitive message content" {
@@ -399,7 +399,7 @@ func TestHandleGetLogDetailsWithFieldMasking(t *testing.T) {
 	}
 
 	log := logs[0]
-	
+
 	// Check that message is masked
 	if log.Message == "Sensitive log message" {
 		t.Error("Expected message to be masked")
@@ -493,7 +493,7 @@ func TestHandleListServices(t *testing.T) {
 		if len(services) != 1 {
 			t.Errorf("Expected 1 service, got %d", len(services))
 		}
-		
+
 		service := services[0].(map[string]interface{})
 		if service["service_name"] != "test-service" {
 			t.Errorf("Expected service name 'test-service', got %v", service["service_name"])
@@ -730,9 +730,9 @@ func TestApplyFieldMasking(t *testing.T) {
 				AgentID:     "original-agent",
 				ServiceName: "original-service",
 				Metadata: map[string]interface{}{
-					"user_id":  "user-123",
-					"api_key":  "secret-key",
-					"count":    42,
+					"user_id": "user-123",
+					"api_key": "secret-key",
+					"count":   42,
 				},
 			},
 		},

@@ -9,8 +9,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/your-org/mcp-logging-server/pkg/models"
-	"github.com/your-org/mcp-logging-server/pkg/storage"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/storage"
 )
 
 // MCPMessage represents a generic MCP message
@@ -69,10 +69,10 @@ func NewServer(port int, storage storage.LogStorage) *Server {
 		storage: storage,
 		tools:   make(map[string]Tool),
 	}
-	
+
 	// Register available tools
 	s.registerTools()
-	
+
 	return s
 }
 
@@ -168,7 +168,7 @@ func (s *Server) registerTools() {
 		Name:        "get_service_status",
 		Description: "Get health status of the logging service",
 		InputSchema: map[string]interface{}{
-			"type": "object",
+			"type":       "object",
 			"properties": map[string]interface{}{},
 		},
 	}
@@ -178,7 +178,7 @@ func (s *Server) registerTools() {
 		Name:        "list_services",
 		Description: "List all available services and agents that have logged entries",
 		InputSchema: map[string]interface{}{
-			"type": "object",
+			"type":       "object",
 			"properties": map[string]interface{}{},
 		},
 	}
@@ -427,7 +427,7 @@ func (s *Server) handleQueryLogs(ctx context.Context, arguments interface{}) (*T
 	if actualLimit == 0 {
 		actualLimit = 100 // default limit
 	}
-	
+
 	paginationInfo := map[string]interface{}{
 		"total_count": result.TotalCount,
 		"has_more":    result.HasMore,
@@ -459,7 +459,7 @@ func (s *Server) handleQueryLogs(ctx context.Context, arguments interface{}) (*T
 // getMaskedFields extracts field masking configuration from arguments
 func (s *Server) getMaskedFields(args map[string]interface{}) []string {
 	var maskedFields []string
-	
+
 	if maskFields, ok := args["mask_fields"].([]interface{}); ok {
 		for _, field := range maskFields {
 			if fieldStr, ok := field.(string); ok {
@@ -467,7 +467,7 @@ func (s *Server) getMaskedFields(args map[string]interface{}) []string {
 			}
 		}
 	}
-	
+
 	return maskedFields
 }
 
@@ -485,7 +485,7 @@ func (s *Server) applyFieldMasking(result *models.LogResult, maskedFields []stri
 
 	for i, log := range result.Logs {
 		maskedLog := log
-		
+
 		// Create a copy of metadata to avoid modifying original
 		if log.Metadata != nil {
 			maskedLog.Metadata = make(map[string]interface{})
@@ -518,7 +518,7 @@ func (s *Server) applyFieldMasking(result *models.LogResult, maskedFields []stri
 				}
 			}
 		}
-		
+
 		maskedResult.Logs[i] = maskedLog
 	}
 
@@ -530,7 +530,7 @@ func (s *Server) maskString(value string) string {
 	if len(value) <= 4 {
 		return "[MASKED]"
 	}
-	
+
 	// Show first 2 and last 2 characters, mask the middle
 	return value[:2] + "[MASKED]" + value[len(value)-2:]
 }
@@ -594,7 +594,7 @@ func (s *Server) handleGetLogDetails(ctx context.Context, arguments interface{})
 func (s *Server) handleGetServiceStatus(ctx context.Context, arguments interface{}) (*ToolResult, error) {
 	// Get storage health status
 	storageStatus := s.storage.HealthCheck(ctx)
-	
+
 	// Create comprehensive system health report
 	systemHealth := map[string]interface{}{
 		"overall_status": "healthy",
@@ -614,7 +614,7 @@ func (s *Server) handleGetServiceStatus(ctx context.Context, arguments interface
 		},
 		"metrics": s.getSystemMetrics(ctx),
 	}
-	
+
 	// Determine overall status based on components
 	if storageStatus.Status != "healthy" {
 		systemHealth["overall_status"] = "degraded"
@@ -654,20 +654,20 @@ func (s *Server) getSystemMetrics(ctx context.Context) map[string]interface{} {
 			"error": "failed to get metrics",
 		}
 	}
-	
+
 	totalLogCount := 0
 	platformCounts := make(map[string]int)
-	
+
 	for _, service := range services {
 		totalLogCount += service.LogCount
 		platformCounts[string(service.Platform)]++
 	}
-	
+
 	return map[string]interface{}{
-		"total_services":   len(services),
-		"total_log_count":  totalLogCount,
-		"platform_counts":  platformCounts,
-		"uptime_seconds":   time.Since(time.Now().Add(-time.Hour)).Seconds(), // Mock uptime
+		"total_services":  len(services),
+		"total_log_count": totalLogCount,
+		"platform_counts": platformCounts,
+		"uptime_seconds":  time.Since(time.Now().Add(-time.Hour)).Seconds(), // Mock uptime
 	}
 }
 
@@ -708,13 +708,13 @@ func (s *Server) handleListServices(ctx context.Context, arguments interface{}) 
 func (s *Server) getPlatformSummary(services []models.ServiceInfo) map[string]interface{} {
 	platformCounts := make(map[string]int)
 	platformLogCounts := make(map[string]int)
-	
+
 	for _, service := range services {
 		platform := string(service.Platform)
 		platformCounts[platform]++
 		platformLogCounts[platform] += service.LogCount
 	}
-	
+
 	return map[string]interface{}{
 		"service_counts": platformCounts,
 		"log_counts":     platformLogCounts,

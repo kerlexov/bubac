@@ -3,7 +3,7 @@ package buffer
 import (
 	"sync"
 
-	"github.com/your-org/mcp-logging-go-sdk/pkg/logger"
+	"github.com/kerlexov/mcp-logging-go-sdk/pkg/logger"
 )
 
 type MemoryBuffer struct {

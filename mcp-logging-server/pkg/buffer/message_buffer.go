@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/your-org/mcp-logging-server/pkg/models"
-	"github.com/your-org/mcp-logging-server/pkg/storage"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/storage"
 )
 
 // MessageBuffer represents an in-memory buffer for log entries
@@ -80,20 +80,20 @@ func (mb *MessageBuffer) Start(ctx context.Context) {
 func (mb *MessageBuffer) Stop() error {
 	close(mb.stopCh)
 	mb.wg.Wait()
-	
+
 	// Save pending logs for recovery if recovery manager is available
 	mb.mutex.RLock()
 	pendingLogs := make([]models.LogEntry, len(mb.buffer))
 	copy(pendingLogs, mb.buffer)
 	mb.mutex.RUnlock()
-	
+
 	if mb.recoveryManager != nil && len(pendingLogs) > 0 {
 		if err := mb.recoveryManager.SavePendingLogs(pendingLogs); err != nil {
 			// Log error but continue with flush
 			fmt.Printf("Failed to save pending logs for recovery: %v\n", err)
 		}
 	}
-	
+
 	// Flush any remaining entries
 	return mb.flush(context.Background())
 }
@@ -102,23 +102,23 @@ func (mb *MessageBuffer) Stop() error {
 func (mb *MessageBuffer) Add(entries []models.LogEntry) error {
 	mb.mutex.Lock()
 	defer mb.mutex.Unlock()
-	
+
 	for _, entry := range entries {
 		// Check if buffer is full
 		if len(mb.buffer) >= mb.size {
 			// Implement rotation strategy - remove oldest entries
 			removeCount := len(mb.buffer) - mb.size + 1
 			mb.buffer = mb.buffer[removeCount:]
-			
+
 			// Report buffer overflow
 			if mb.metrics != nil {
 				mb.metrics.IncrementBufferOverflows()
 			}
 		}
-		
+
 		mb.buffer = append(mb.buffer, entry)
 	}
-	
+
 	// Trigger flush if buffer is getting full or batch size is reached
 	if len(mb.buffer) >= mb.maxBatchSize {
 		select {
@@ -127,7 +127,7 @@ func (mb *MessageBuffer) Add(entries []models.LogEntry) error {
 			// Channel is full, flush is already scheduled
 		}
 	}
-	
+
 	return nil
 }
 
@@ -140,7 +140,7 @@ func (mb *MessageBuffer) Flush() error {
 func (mb *MessageBuffer) GetStats() BufferStats {
 	mb.mutex.RLock()
 	defer mb.mutex.RUnlock()
-	
+
 	return BufferStats{
 		Size:     len(mb.buffer),
 		Capacity: mb.size,
@@ -158,10 +158,10 @@ type BufferStats struct {
 // flushRoutine runs the background flush routine
 func (mb *MessageBuffer) flushRoutine(ctx context.Context) {
 	defer mb.wg.Done()
-	
+
 	ticker := time.NewTicker(mb.flushTimeout)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -197,12 +197,12 @@ func (mb *MessageBuffer) flushRoutine(ctx context.Context) {
 // flush flushes the buffer to storage
 func (mb *MessageBuffer) flush(ctx context.Context) error {
 	mb.mutex.Lock()
-	
+
 	if len(mb.buffer) == 0 {
 		mb.mutex.Unlock()
 		return nil
 	}
-	
+
 	// Create batches to avoid overwhelming storage
 	var batches [][]models.LogEntry
 	for i := 0; i < len(mb.buffer); i += mb.maxBatchSize {
@@ -210,16 +210,16 @@ func (mb *MessageBuffer) flush(ctx context.Context) error {
 		if end > len(mb.buffer) {
 			end = len(mb.buffer)
 		}
-		
+
 		batch := make([]models.LogEntry, end-i)
 		copy(batch, mb.buffer[i:end])
 		batches = append(batches, batch)
 	}
-	
+
 	// Clear buffer after copying
 	mb.buffer = mb.buffer[:0]
 	mb.mutex.Unlock()
-	
+
 	// Store batches
 	for _, batch := range batches {
 		if err := mb.storage.Store(ctx, batch); err != nil {
@@ -233,6 +233,6 @@ func (mb *MessageBuffer) flush(ctx context.Context) error {
 			return err
 		}
 	}
-	
+
 	return nil
 }

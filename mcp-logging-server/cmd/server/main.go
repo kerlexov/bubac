@@ -9,16 +9,16 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/your-org/mcp-logging-server/pkg/auth"
-	"github.com/your-org/mcp-logging-server/pkg/buffer"
-	"github.com/your-org/mcp-logging-server/pkg/config"
-	"github.com/your-org/mcp-logging-server/pkg/dataprotection"
-	"github.com/your-org/mcp-logging-server/pkg/ingestion"
-	"github.com/your-org/mcp-logging-server/pkg/mcp"
-	"github.com/your-org/mcp-logging-server/pkg/ratelimit"
-	"github.com/your-org/mcp-logging-server/pkg/security"
-	"github.com/your-org/mcp-logging-server/pkg/storage"
-	tlsconfig "github.com/your-org/mcp-logging-server/pkg/tls"
+	"github.com/kerlexov/mcp-logging-server/pkg/auth"
+	"github.com/kerlexov/mcp-logging-server/pkg/buffer"
+	"github.com/kerlexov/mcp-logging-server/pkg/config"
+	"github.com/kerlexov/mcp-logging-server/pkg/dataprotection"
+	"github.com/kerlexov/mcp-logging-server/pkg/ingestion"
+	"github.com/kerlexov/mcp-logging-server/pkg/mcp"
+	"github.com/kerlexov/mcp-logging-server/pkg/ratelimit"
+	"github.com/kerlexov/mcp-logging-server/pkg/security"
+	"github.com/kerlexov/mcp-logging-server/pkg/storage"
+	tlsconfig "github.com/kerlexov/mcp-logging-server/pkg/tls"
 )
 
 func main() {
@@ -33,16 +33,16 @@ func main() {
 	if apiKeyConfigPath == "" {
 		apiKeyConfigPath = "./config/api-keys.yaml"
 	}
-	
+
 	authConfig, err := auth.LoadAPIKeyConfig(apiKeyConfigPath)
 	if err != nil {
 		log.Fatalf("Failed to load API key configuration: %v", err)
 	}
-	
+
 	// Merge with environment configuration
 	envAuthConfig := auth.LoadAPIKeyConfigFromEnv()
 	authConfig = auth.MergeConfigs(authConfig, envAuthConfig)
-	
+
 	authManager := auth.NewAPIKeyManager(authConfig)
 
 	// Load rate limiting configuration

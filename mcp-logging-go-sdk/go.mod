@@ -1,4 +1,4 @@
-module github.com/your-org/mcp-logging-go-sdk
+module github.com/kerlexov/mcp-logging-go-sdk
 
 go 1.21
 

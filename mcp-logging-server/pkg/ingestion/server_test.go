@@ -11,16 +11,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/your-org/mcp-logging-server/pkg/buffer"
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/buffer"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 // MockStorage implements storage.LogStorage for testing
 type MockStorage struct {
-	storeCalled     bool
-	storeError      error
-	healthStatus    models.HealthStatus
-	storedLogs      []models.LogEntry
+	storeCalled  bool
+	storeError   error
+	healthStatus models.HealthStatus
+	storedLogs   []models.LogEntry
 }
 
 func (m *MockStorage) Store(ctx context.Context, logs []models.LogEntry) error {
@@ -54,7 +54,7 @@ func (m *MockStorage) Close() error {
 
 func TestServer_handleHealthCheck(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	tests := []struct {
 		name           string
 		healthStatus   models.HealthStatus
@@ -77,37 +77,37 @@ func TestServer_handleHealthCheck(t *testing.T) {
 			expectedStatus: http.StatusServiceUnavailable,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := &MockStorage{
 				healthStatus: tt.healthStatus,
 			}
-			
+
 			bufferConfig := buffer.Config{
 				Size:         100,
 				MaxBatchSize: 10,
 				FlushTimeout: 1 * time.Second,
 			}
-			
+
 			server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
-			
+
 			router := gin.New()
 			server.registerRoutes(router)
-			
+
 			req, _ := http.NewRequest("GET", "/health", nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
-			
+
 			if w.Code != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
-			
+
 			var response map[string]interface{}
 			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 				t.Fatalf("Failed to parse response: %v", err)
 			}
-			
+
 			if response["service"] != "ingestion-server" {
 				t.Errorf("Expected service to be 'ingestion-server', got %v", response["service"])
 			}
@@ -117,7 +117,7 @@ func TestServer_handleHealthCheck(t *testing.T) {
 
 func TestServer_handleIngestLogs(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	tests := []struct {
 		name           string
 		logEntry       models.LogEntry
@@ -157,35 +157,35 @@ func TestServer_handleIngestLogs(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := &MockStorage{
 				storeError: tt.storeError,
 			}
-			
+
 			bufferConfig := buffer.Config{
 				Size:         100,
 				MaxBatchSize: 10,
 				FlushTimeout: 1 * time.Second,
 			}
-			
+
 			server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
-			
+
 			router := gin.New()
 			server.registerRoutes(router)
-			
+
 			jsonData, _ := json.Marshal(tt.logEntry)
 			req, _ := http.NewRequest("POST", "/v1/logs", bytes.NewBuffer(jsonData))
 			req.Header.Set("Content-Type", "application/json")
-			
+
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
-			
+
 			if w.Code != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
-			
+
 			// Note: With buffering, Store might not be called immediately
 			// We'll test the buffering behavior separately
 		})
@@ -194,7 +194,7 @@ func TestServer_handleIngestLogs(t *testing.T) {
 
 func TestServer_handleIngestLogsBatch(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	tests := []struct {
 		name           string
 		logEntries     []models.LogEntry
@@ -239,29 +239,29 @@ func TestServer_handleIngestLogsBatch(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := &MockStorage{}
-			
+
 			bufferConfig := buffer.Config{
 				Size:         100,
 				MaxBatchSize: 10,
 				FlushTimeout: 1 * time.Second,
 			}
-			
+
 			server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
-			
+
 			router := gin.New()
 			server.registerRoutes(router)
-			
+
 			jsonData, _ := json.Marshal(tt.logEntries)
 			req, _ := http.NewRequest("POST", "/v1/logs/batch", bytes.NewBuffer(jsonData))
 			req.Header.Set("Content-Type", "application/json")
-			
+
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
-			
+
 			if w.Code != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
@@ -271,53 +271,53 @@ func TestServer_handleIngestLogsBatch(t *testing.T) {
 
 func TestServer_CORSHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	mockStorage := &MockStorage{
 		healthStatus: models.HealthStatus{Status: "healthy"},
 	}
-	
+
 	bufferConfig := buffer.Config{
 		Size:         100,
 		MaxBatchSize: 10,
 		FlushTimeout: 1 * time.Second,
 	}
-	
+
 	server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
-	
+
 	router := gin.New()
-	
+
 	// Add CORS middleware manually for testing
 	router.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
-		
+
 		c.Next()
 	})
-	
+
 	server.registerRoutes(router)
-	
+
 	// Test OPTIONS request
 	req, _ := http.NewRequest("OPTIONS", "/v1/logs", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	
+
 	if w.Code != http.StatusNoContent {
 		t.Errorf("Expected status %d for OPTIONS, got %d", http.StatusNoContent, w.Code)
 	}
-	
+
 	// Check CORS headers
 	expectedHeaders := map[string]string{
 		"Access-Control-Allow-Origin":  "*",
 		"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
 		"Access-Control-Allow-Headers": "Content-Type, Authorization",
 	}
-	
+
 	for header, expectedValue := range expectedHeaders {
 		if w.Header().Get(header) != expectedValue {
 			t.Errorf("Expected header %s to be %s, got %s", header, expectedValue, w.Header().Get(header))
@@ -327,20 +327,20 @@ func TestServer_CORSHeaders(t *testing.T) {
 
 func TestServer_ConcurrentRequests(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	mockStorage := &MockStorage{}
-	
+
 	bufferConfig := buffer.Config{
 		Size:         100,
 		MaxBatchSize: 10,
 		FlushTimeout: 1 * time.Second,
 	}
-	
+
 	server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
-	
+
 	router := gin.New()
 	server.registerRoutes(router)
-	
+
 	// Create a valid log entry
 	logEntry := models.LogEntry{
 		ID:          "550e8400-e29b-41d4-a716-446655440000",
@@ -351,24 +351,24 @@ func TestServer_ConcurrentRequests(t *testing.T) {
 		AgentID:     "test-agent",
 		Platform:    models.PlatformGo,
 	}
-	
+
 	// Send multiple concurrent requests
 	numRequests := 10
 	results := make(chan int, numRequests)
-	
+
 	for i := 0; i < numRequests; i++ {
 		go func() {
 			jsonData, _ := json.Marshal(logEntry)
 			req, _ := http.NewRequest("POST", "/v1/logs", bytes.NewBuffer(jsonData))
 			req.Header.Set("Content-Type", "application/json")
-			
+
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
-			
+
 			results <- w.Code
 		}()
 	}
-	
+
 	// Collect results
 	for i := 0; i < numRequests; i++ {
 		status := <-results
@@ -376,13 +376,13 @@ func TestServer_ConcurrentRequests(t *testing.T) {
 			t.Errorf("Expected status %d, got %d", http.StatusCreated, status)
 		}
 	}
-	
+
 	// Manually flush the buffer to ensure all entries are stored
 	err := server.buffer.Flush()
 	if err != nil {
 		t.Fatalf("Failed to flush buffer: %v", err)
 	}
-	
+
 	// Verify all requests were processed
 	if len(mockStorage.storedLogs) != numRequests {
 		t.Errorf("Expected %d stored logs, got %d", numRequests, len(mockStorage.storedLogs))
@@ -391,7 +391,7 @@ func TestServer_ConcurrentRequests(t *testing.T) {
 
 func TestServer_ErrorHandling(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	tests := []struct {
 		name           string
 		requestBody    string
@@ -421,7 +421,7 @@ func TestServer_ErrorHandling(t *testing.T) {
 			expectedError:  "INVALID_JSON",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := &MockStorage{}
@@ -430,28 +430,28 @@ func TestServer_ErrorHandling(t *testing.T) {
 				MaxBatchSize: 10,
 				FlushTimeout: 1 * time.Second,
 			}
-			
+
 			server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
 			router := gin.New()
 			server.registerRoutes(router)
-			
+
 			req, _ := http.NewRequest("POST", "/v1/logs", bytes.NewBufferString(tt.requestBody))
 			if tt.contentType != "" {
 				req.Header.Set("Content-Type", tt.contentType)
 			}
-			
+
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
-			
+
 			if w.Code != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
-			
+
 			var response map[string]interface{}
 			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 				t.Fatalf("Failed to parse error response: %v", err)
 			}
-			
+
 			if errorObj, ok := response["error"].(map[string]interface{}); ok {
 				if code, ok := errorObj["code"].(string); ok {
 					if code != tt.expectedError {
@@ -469,18 +469,18 @@ func TestServer_ErrorHandling(t *testing.T) {
 
 func TestServer_BatchSizeValidation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	mockStorage := &MockStorage{}
 	bufferConfig := buffer.Config{
 		Size:         100,
 		MaxBatchSize: 10,
 		FlushTimeout: 1 * time.Second,
 	}
-	
+
 	server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
 	router := gin.New()
 	server.registerRoutes(router)
-	
+
 	// Create a batch that's too large (over 1000 entries)
 	largeBatch := make([]models.LogEntry, 1001)
 	for i := range largeBatch {
@@ -494,23 +494,23 @@ func TestServer_BatchSizeValidation(t *testing.T) {
 			Platform:    models.PlatformGo,
 		}
 	}
-	
+
 	jsonData, _ := json.Marshal(largeBatch)
 	req, _ := http.NewRequest("POST", "/v1/logs/batch", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	
+
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("Expected status %d for large batch, got %d", http.StatusBadRequest, w.Code)
 	}
-	
+
 	var response map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
-	
+
 	if errorObj, ok := response["error"].(map[string]interface{}); ok {
 		if code, ok := errorObj["code"].(string); ok {
 			if code != "BATCH_TOO_LARGE" {
@@ -522,7 +522,7 @@ func TestServer_BatchSizeValidation(t *testing.T) {
 
 func TestServer_CircuitBreakerEndpoints(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	mockStorage := &MockStorage{
 		healthStatus: models.HealthStatus{Status: "healthy"},
 	}
@@ -531,34 +531,34 @@ func TestServer_CircuitBreakerEndpoints(t *testing.T) {
 		MaxBatchSize: 10,
 		FlushTimeout: 1 * time.Second,
 	}
-	
+
 	server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
 	router := gin.New()
 	server.registerRoutes(router)
-	
+
 	// Test circuit breaker stats endpoint
 	req, _ := http.NewRequest("GET", "/circuit-breaker/stats", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	
+
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d for circuit breaker stats, got %d", http.StatusOK, w.Code)
 	}
-	
+
 	var response map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
-	
+
 	if _, exists := response["circuit_breaker_stats"]; !exists {
 		t.Error("Expected circuit_breaker_stats in response")
 	}
-	
+
 	// Test circuit breaker reset endpoint
 	req, _ = http.NewRequest("POST", "/circuit-breaker/reset", nil)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	
+
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d for circuit breaker reset, got %d", http.StatusOK, w.Code)
 	}
@@ -566,32 +566,32 @@ func TestServer_CircuitBreakerEndpoints(t *testing.T) {
 
 func TestServer_handleBufferStats(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	mockStorage := &MockStorage{}
 	bufferConfig := buffer.Config{
 		Size:         100,
 		MaxBatchSize: 10,
 		FlushTimeout: 1 * time.Second,
 	}
-	
+
 	server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
-	
+
 	router := gin.New()
 	server.registerRoutes(router)
-	
+
 	req, _ := http.NewRequest("GET", "/stats", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	
+
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
-	
+
 	var response map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
-	
+
 	if _, exists := response["buffer_stats"]; !exists {
 		t.Error("Expected buffer_stats in response")
 	}
@@ -599,19 +599,19 @@ func TestServer_handleBufferStats(t *testing.T) {
 
 func TestServer_handleFlushBuffer(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	mockStorage := &MockStorage{}
 	bufferConfig := buffer.Config{
 		Size:         100,
 		MaxBatchSize: 10,
 		FlushTimeout: 1 * time.Second,
 	}
-	
+
 	server := NewServer(8080, mockStorage, bufferConfig, "/tmp/test_recovery")
-	
+
 	router := gin.New()
 	server.registerRoutes(router)
-	
+
 	// Add some entries to buffer first
 	logEntry := models.LogEntry{
 		ID:          "550e8400-e29b-41d4-a716-446655440000",
@@ -622,27 +622,27 @@ func TestServer_handleFlushBuffer(t *testing.T) {
 		AgentID:     "test-agent",
 		Platform:    models.PlatformGo,
 	}
-	
+
 	server.buffer.Add([]models.LogEntry{logEntry})
-	
+
 	// Test flush endpoint
 	req, _ := http.NewRequest("POST", "/v1/flush", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	
+
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
-	
+
 	var response map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
-	
+
 	if response["message"] != "Buffer flushed successfully" {
 		t.Errorf("Expected success message, got %v", response["message"])
 	}
-	
+
 	// Verify entry was stored
 	if len(mockStorage.storedLogs) != 1 {
 		t.Errorf("Expected 1 stored log after flush, got %d", len(mockStorage.storedLogs))

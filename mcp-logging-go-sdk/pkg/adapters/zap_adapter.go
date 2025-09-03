@@ -1,7 +1,7 @@
 package adapters
 
 import (
-	"github.com/your-org/mcp-logging-go-sdk/pkg/logger"
+	"github.com/kerlexov/mcp-logging-go-sdk/pkg/logger"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

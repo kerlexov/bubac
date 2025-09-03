@@ -16,7 +16,7 @@ A Go SDK for centralized logging with MCP (Model Context Protocol) integration. 
 ## Installation
 
 ```bash
-go get github.com/your-org/mcp-logging-go-sdk
+go get github.com/kerlexov/mcp-logging-go-sdk
 ```
 
 ## Quick Start
@@ -31,7 +31,7 @@ import (
     "log"
     "time"
     
-    "github.com/your-org/mcp-logging-go-sdk/pkg/logger"
+    "github.com/kerlexov/mcp-logging-go-sdk/pkg/logger"
 )
 
 func main() {
@@ -122,7 +122,7 @@ agentLogger := mcpLogger.WithAgentID("auth-agent-001")
 ### Standard Log Adapter
 
 ```go
-import "github.com/your-org/mcp-logging-go-sdk/pkg/adapters"
+import "github.com/kerlexov/mcp-logging-go-sdk/pkg/adapters"
 
 // Redirect standard log to MCP logger
 adapter := adapters.NewStandardLogAdapter(mcpLogger)
@@ -134,7 +134,7 @@ log.Println("This will go to MCP logger")
 ```go
 import (
     "github.com/sirupsen/logrus"
-    "github.com/your-org/mcp-logging-go-sdk/pkg/adapters"
+    "github.com/kerlexov/mcp-logging-go-sdk/pkg/adapters"
 )
 
 // Install logrus hook
@@ -149,7 +149,7 @@ logrus.Info("This goes to both logrus and MCP")
 ```go
 import (
     "go.uber.org/zap"
-    "github.com/your-org/mcp-logging-go-sdk/pkg/adapters"
+    "github.com/kerlexov/mcp-logging-go-sdk/pkg/adapters"
 )
 
 // Create zap logger with MCP core

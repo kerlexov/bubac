@@ -37,7 +37,7 @@ The MCP Logging Server is designed to collect logs from distributed AI agent ser
 ### 1. Installation
 
 ```bash
-git clone https://github.com/your-org/mcp-logging-server
+git clone https://github.com/kerlexov/mcp-logging-server
 cd mcp-logging-server
 go mod download
 ```
@@ -187,11 +187,11 @@ docker run -p 8080:8080 -p 8081:8081 mcp-logging-server
 
 The following SDKs are available for different platforms:
 
-- **Go SDK**: `github.com/your-org/mcp-logging-go`
+- **Go SDK**: `github.com/kerlexov/mcp-logging-go`
 - **Swift SDK**: Swift Package Manager compatible
-- **Express.js SDK**: `@your-org/mcp-logging-express`
-- **React SDK**: `@your-org/mcp-logging-react`
-- **React Native SDK**: `@your-org/mcp-logging-react-native`
+- **Express.js SDK**: `@kerlexov/mcp-logging-express`
+- **React SDK**: `@kerlexov/mcp-logging-react`
+- **React Native SDK**: `@kerlexov/mcp-logging-react-native`
 - **Kotlin SDK**: Maven/Gradle compatible
 
 ## Contributing
@@ -209,5 +209,5 @@ MIT License - see LICENSE file for details.
 ## Support
 
 For issues and questions:
-- GitHub Issues: https://github.com/your-org/mcp-logging-server/issues
-- Documentation: https://docs.your-org.com/mcp-logging-server
+- GitHub Issues: https://github.com/kerlexov/mcp-logging-server/issues
+- Documentation: https://docs.kerlexov.com/mcp-logging-server

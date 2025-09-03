@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -29,26 +29,26 @@ func NewSQLiteStorageWithSearch(connectionString, searchIndexPath string) (*SQLi
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Enable foreign keys and WAL mode for better performance
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
 	}
-	
+
 	if _, err := db.Exec("PRAGMA journal_mode = WAL"); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
 	}
-	
+
 	storage := &SQLiteStorage{db: db}
-	
+
 	// Initialize database schema
 	if err := storage.migrate(); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
-	
+
 	// Initialize search service if path is provided
 	if searchIndexPath != "" {
 		searchService, err := NewSearchService(searchIndexPath)
@@ -58,7 +58,7 @@ func NewSQLiteStorageWithSearch(connectionString, searchIndexPath string) (*SQLi
 		}
 		storage.search = searchService
 	}
-	
+
 	return storage, nil
 }
 
@@ -70,11 +70,11 @@ func (s *SQLiteStorage) migrate() error {
 		version INTEGER PRIMARY KEY,
 		applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
-	
+
 	if _, err := s.db.Exec(createMigrationsTable); err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
-	
+
 	// Define migrations
 	migrations := []struct {
 		version int
@@ -107,7 +107,7 @@ func (s *SQLiteStorage) migrate() error {
 			`,
 		},
 	}
-	
+
 	// Apply migrations
 	for _, migration := range migrations {
 		var count int
@@ -115,20 +115,20 @@ func (s *SQLiteStorage) migrate() error {
 		if err != nil {
 			return fmt.Errorf("failed to check migration version %d: %w", migration.version, err)
 		}
-		
+
 		if count == 0 {
 			// Apply migration
 			if _, err := s.db.Exec(migration.sql); err != nil {
 				return fmt.Errorf("failed to apply migration version %d: %w", migration.version, err)
 			}
-			
+
 			// Record migration
 			if _, err := s.db.Exec("INSERT INTO migrations (version) VALUES (?)", migration.version); err != nil {
 				return fmt.Errorf("failed to record migration version %d: %w", migration.version, err)
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -137,13 +137,13 @@ func (s *SQLiteStorage) Store(ctx context.Context, logs []models.LogEntry) error
 	if len(logs) == 0 {
 		return nil
 	}
-	
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
-	
+
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO log_entries (
 			id, timestamp, level, message, service_name, agent_id, platform,
@@ -154,16 +154,16 @@ func (s *SQLiteStorage) Store(ctx context.Context, logs []models.LogEntry) error
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer stmt.Close()
-	
+
 	for _, log := range logs {
 		// Validate log entry
 		if err := log.Validate(); err != nil {
 			return fmt.Errorf("invalid log entry %s: %w", log.ID, err)
 		}
-		
+
 		// Serialize JSON fields
 		var metadataJSON, deviceInfoJSON, sourceLocationJSON *string
-		
+
 		if log.Metadata != nil {
 			if data, err := json.Marshal(log.Metadata); err != nil {
 				return fmt.Errorf("failed to marshal metadata for log %s: %w", log.ID, err)
@@ -172,7 +172,7 @@ func (s *SQLiteStorage) Store(ctx context.Context, logs []models.LogEntry) error
 				metadataJSON = &metadataStr
 			}
 		}
-		
+
 		if log.DeviceInfo != nil {
 			if data, err := json.Marshal(log.DeviceInfo); err != nil {
 				return fmt.Errorf("failed to marshal device info for log %s: %w", log.ID, err)
@@ -181,7 +181,7 @@ func (s *SQLiteStorage) Store(ctx context.Context, logs []models.LogEntry) error
 				deviceInfoJSON = &deviceInfoStr
 			}
 		}
-		
+
 		if log.SourceLocation != nil {
 			if data, err := json.Marshal(log.SourceLocation); err != nil {
 				return fmt.Errorf("failed to marshal source location for log %s: %w", log.ID, err)
@@ -190,12 +190,12 @@ func (s *SQLiteStorage) Store(ctx context.Context, logs []models.LogEntry) error
 				sourceLocationJSON = &sourceLocationStr
 			}
 		}
-		
+
 		var stackTrace *string
 		if log.StackTrace != "" {
 			stackTrace = &log.StackTrace
 		}
-		
+
 		_, err := stmt.ExecContext(ctx,
 			log.ID,
 			log.Timestamp,
@@ -213,11 +213,11 @@ func (s *SQLiteStorage) Store(ctx context.Context, logs []models.LogEntry) error
 			return fmt.Errorf("failed to insert log entry %s: %w", log.ID, err)
 		}
 	}
-	
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
-	
+
 	// Index logs for search if search service is available
 	if s.search != nil {
 		if err := s.search.IndexLogEntries(logs); err != nil {
@@ -225,7 +225,7 @@ func (s *SQLiteStorage) Store(ctx context.Context, logs []models.LogEntry) error
 			fmt.Printf("Warning: failed to index logs for search: %v\n", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -235,7 +235,7 @@ func (s *SQLiteStorage) Query(ctx context.Context, filter models.LogFilter) (*mo
 	if s.search != nil && filter.MessageContains != "" {
 		return s.queryWithSearch(ctx, filter)
 	}
-	
+
 	return s.queryWithSQL(ctx, filter)
 }
 
@@ -246,7 +246,7 @@ func (s *SQLiteStorage) queryWithSearch(ctx context.Context, filter models.LogFi
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}
-	
+
 	if len(logIDs) == 0 {
 		return &models.LogResult{
 			Logs:       []models.LogEntry{},
@@ -254,16 +254,16 @@ func (s *SQLiteStorage) queryWithSearch(ctx context.Context, filter models.LogFi
 			HasMore:    false,
 		}, nil
 	}
-	
+
 	// Get full log entries by IDs
 	logs, err := s.GetByIDs(ctx, logIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get logs by IDs: %w", err)
 	}
-	
+
 	// Apply additional SQL-based filtering if needed (for precise filtering)
 	filteredLogs := s.applyAdditionalFiltering(logs, filter)
-	
+
 	// Calculate pagination
 	totalCount := len(filteredLogs)
 	offset := filter.Offset
@@ -274,20 +274,20 @@ func (s *SQLiteStorage) queryWithSearch(ctx context.Context, filter models.LogFi
 	if limit <= 0 {
 		limit = 100
 	}
-	
+
 	// Apply pagination
 	end := offset + limit
 	if end > len(filteredLogs) {
 		end = len(filteredLogs)
 	}
-	
+
 	var paginatedLogs []models.LogEntry
 	if offset < len(filteredLogs) {
 		paginatedLogs = filteredLogs[offset:end]
 	}
-	
+
 	hasMore := offset+len(paginatedLogs) < totalCount
-	
+
 	return &models.LogResult{
 		Logs:       paginatedLogs,
 		TotalCount: totalCount,
@@ -298,7 +298,7 @@ func (s *SQLiteStorage) queryWithSearch(ctx context.Context, filter models.LogFi
 // applyAdditionalFiltering applies filters that weren't handled by the search
 func (s *SQLiteStorage) applyAdditionalFiltering(logs []models.LogEntry, filter models.LogFilter) []models.LogEntry {
 	var filtered []models.LogEntry
-	
+
 	for _, log := range logs {
 		// Additional time range filtering (search might be less precise)
 		if !filter.StartTime.IsZero() && log.Timestamp.Before(filter.StartTime) {
@@ -307,10 +307,10 @@ func (s *SQLiteStorage) applyAdditionalFiltering(logs []models.LogEntry, filter 
 		if !filter.EndTime.IsZero() && log.Timestamp.After(filter.EndTime) {
 			continue
 		}
-		
+
 		filtered = append(filtered, log)
 	}
-	
+
 	return filtered
 }
 
@@ -320,72 +320,72 @@ func (s *SQLiteStorage) queryWithSQL(ctx context.Context, filter models.LogFilte
 	var conditions []string
 	var args []interface{}
 	argIndex := 0
-	
+
 	if filter.ServiceName != "" {
 		conditions = append(conditions, "service_name = ?")
 		args = append(args, filter.ServiceName)
 		argIndex++
 	}
-	
+
 	if filter.AgentID != "" {
 		conditions = append(conditions, "agent_id = ?")
 		args = append(args, filter.AgentID)
 		argIndex++
 	}
-	
+
 	if filter.Level != "" {
 		conditions = append(conditions, "level = ?")
 		args = append(args, string(filter.Level))
 		argIndex++
 	}
-	
+
 	if filter.Platform != "" {
 		conditions = append(conditions, "platform = ?")
 		args = append(args, string(filter.Platform))
 		argIndex++
 	}
-	
+
 	if !filter.StartTime.IsZero() {
 		conditions = append(conditions, "timestamp >= ?")
 		args = append(args, filter.StartTime)
 		argIndex++
 	}
-	
+
 	if !filter.EndTime.IsZero() {
 		conditions = append(conditions, "timestamp <= ?")
 		args = append(args, filter.EndTime)
 		argIndex++
 	}
-	
+
 	if filter.MessageContains != "" {
 		conditions = append(conditions, "message LIKE ?")
 		args = append(args, "%"+filter.MessageContains+"%")
 		argIndex++
 	}
-	
+
 	whereClause := ""
 	if len(conditions) > 0 {
 		whereClause = "WHERE " + strings.Join(conditions, " AND ")
 	}
-	
+
 	// Set default limit if not specified
 	limit := filter.Limit
 	if limit <= 0 {
 		limit = 100
 	}
-	
+
 	offset := filter.Offset
 	if offset < 0 {
 		offset = 0
 	}
-	
+
 	// Get total count
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM log_entries %s", whereClause)
 	var totalCount int
 	if err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount); err != nil {
 		return nil, fmt.Errorf("failed to get total count: %w", err)
 	}
-	
+
 	// Get logs
 	query := fmt.Sprintf(`
 		SELECT id, timestamp, level, message, service_name, agent_id, platform,
@@ -394,20 +394,20 @@ func (s *SQLiteStorage) queryWithSQL(ctx context.Context, filter models.LogFilte
 		ORDER BY timestamp DESC
 		LIMIT ? OFFSET ?
 	`, whereClause)
-	
+
 	args = append(args, limit, offset)
-	
+
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query logs: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var logs []models.LogEntry
 	for rows.Next() {
 		var log models.LogEntry
 		var metadataJSON, deviceInfoJSON, sourceLocationJSON, stackTrace sql.NullString
-		
+
 		err := rows.Scan(
 			&log.ID,
 			&log.Timestamp,
@@ -424,41 +424,41 @@ func (s *SQLiteStorage) queryWithSQL(ctx context.Context, filter models.LogFilte
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan log entry: %w", err)
 		}
-		
+
 		// Deserialize JSON fields
 		if metadataJSON.Valid {
 			if err := json.Unmarshal([]byte(metadataJSON.String), &log.Metadata); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal metadata for log %s: %w", log.ID, err)
 			}
 		}
-		
+
 		if deviceInfoJSON.Valid {
 			log.DeviceInfo = &models.DeviceInfo{}
 			if err := json.Unmarshal([]byte(deviceInfoJSON.String), log.DeviceInfo); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal device info for log %s: %w", log.ID, err)
 			}
 		}
-		
+
 		if sourceLocationJSON.Valid {
 			log.SourceLocation = &models.SourceLocation{}
 			if err := json.Unmarshal([]byte(sourceLocationJSON.String), log.SourceLocation); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal source location for log %s: %w", log.ID, err)
 			}
 		}
-		
+
 		if stackTrace.Valid {
 			log.StackTrace = stackTrace.String
 		}
-		
+
 		logs = append(logs, log)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
-	
+
 	hasMore := offset+len(logs) < totalCount
-	
+
 	return &models.LogResult{
 		Logs:       logs,
 		TotalCount: totalCount,
@@ -471,7 +471,7 @@ func (s *SQLiteStorage) GetByIDs(ctx context.Context, ids []string) ([]models.Lo
 	if len(ids) == 0 {
 		return []models.LogEntry{}, nil
 	}
-	
+
 	// Build IN clause with placeholders
 	placeholders := make([]string, len(ids))
 	args := make([]interface{}, len(ids))
@@ -479,7 +479,7 @@ func (s *SQLiteStorage) GetByIDs(ctx context.Context, ids []string) ([]models.Lo
 		placeholders[i] = "?"
 		args[i] = id
 	}
-	
+
 	query := fmt.Sprintf(`
 		SELECT id, timestamp, level, message, service_name, agent_id, platform,
 			   metadata, device_info, stack_trace, source_location
@@ -487,18 +487,18 @@ func (s *SQLiteStorage) GetByIDs(ctx context.Context, ids []string) ([]models.Lo
 		WHERE id IN (%s)
 		ORDER BY timestamp DESC
 	`, strings.Join(placeholders, ","))
-	
+
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query logs by IDs: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var logs []models.LogEntry
 	for rows.Next() {
 		var log models.LogEntry
 		var metadataJSON, deviceInfoJSON, sourceLocationJSON, stackTrace sql.NullString
-		
+
 		err := rows.Scan(
 			&log.ID,
 			&log.Timestamp,
@@ -515,39 +515,39 @@ func (s *SQLiteStorage) GetByIDs(ctx context.Context, ids []string) ([]models.Lo
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan log entry: %w", err)
 		}
-		
+
 		// Deserialize JSON fields
 		if metadataJSON.Valid {
 			if err := json.Unmarshal([]byte(metadataJSON.String), &log.Metadata); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal metadata for log %s: %w", log.ID, err)
 			}
 		}
-		
+
 		if deviceInfoJSON.Valid {
 			log.DeviceInfo = &models.DeviceInfo{}
 			if err := json.Unmarshal([]byte(deviceInfoJSON.String), log.DeviceInfo); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal device info for log %s: %w", log.ID, err)
 			}
 		}
-		
+
 		if sourceLocationJSON.Valid {
 			log.SourceLocation = &models.SourceLocation{}
 			if err := json.Unmarshal([]byte(sourceLocationJSON.String), log.SourceLocation); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal source location for log %s: %w", log.ID, err)
 			}
 		}
-		
+
 		if stackTrace.Valid {
 			log.StackTrace = stackTrace.String
 		}
-		
+
 		logs = append(logs, log)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
-	
+
 	return logs, nil
 }
 
@@ -559,19 +559,19 @@ func (s *SQLiteStorage) GetServices(ctx context.Context) ([]models.ServiceInfo, 
 		GROUP BY service_name, agent_id, platform
 		ORDER BY last_seen DESC
 	`
-	
+
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query services: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var services []models.ServiceInfo
 	for rows.Next() {
 		var service models.ServiceInfo
 		var platformStr string
 		var lastSeenStr string
-		
+
 		err := rows.Scan(
 			&service.ServiceName,
 			&service.AgentID,
@@ -582,7 +582,7 @@ func (s *SQLiteStorage) GetServices(ctx context.Context) ([]models.ServiceInfo, 
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan service info: %w", err)
 		}
-		
+
 		// Parse timestamp string
 		lastSeen, err := time.Parse("2006-01-02 15:04:05.999999999-07:00", lastSeenStr)
 		if err != nil {
@@ -592,16 +592,16 @@ func (s *SQLiteStorage) GetServices(ctx context.Context) ([]models.ServiceInfo, 
 				return nil, fmt.Errorf("failed to parse last_seen timestamp: %w", err)
 			}
 		}
-		
+
 		service.Platform = models.Platform(platformStr)
 		service.LastSeen = lastSeen
 		services = append(services, service)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
-	
+
 	return services, nil
 }
 
@@ -610,13 +610,13 @@ func (s *SQLiteStorage) DeleteByIDs(ctx context.Context, ids []string) (int, err
 	if len(ids) == 0 {
 		return 0, nil
 	}
-	
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
-	
+
 	// Build IN clause with placeholders
 	placeholders := make([]string, len(ids))
 	args := make([]interface{}, len(ids))
@@ -624,23 +624,23 @@ func (s *SQLiteStorage) DeleteByIDs(ctx context.Context, ids []string) (int, err
 		placeholders[i] = "?"
 		args[i] = id
 	}
-	
+
 	query := fmt.Sprintf("DELETE FROM log_entries WHERE id IN (%s)", strings.Join(placeholders, ","))
-	
+
 	result, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete log entries: %w", err)
 	}
-	
+
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get rows affected: %w", err)
 	}
-	
+
 	if err := tx.Commit(); err != nil {
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-	
+
 	// Remove from search index if available
 	if s.search != nil {
 		for _, id := range ids {
@@ -650,7 +650,7 @@ func (s *SQLiteStorage) DeleteByIDs(ctx context.Context, ids []string) (int, err
 			}
 		}
 	}
-	
+
 	return int(rowsAffected), nil
 }
 
@@ -661,14 +661,14 @@ func (s *SQLiteStorage) HealthCheck(ctx context.Context) models.HealthStatus {
 		Timestamp: time.Now(),
 		Details:   make(map[string]string),
 	}
-	
+
 	// Test database connection
 	if err := s.db.PingContext(ctx); err != nil {
 		status.Status = "unhealthy"
 		status.Details["database"] = fmt.Sprintf("ping failed: %v", err)
 		return status
 	}
-	
+
 	// Test basic query
 	var count int
 	if err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM log_entries").Scan(&count); err != nil {
@@ -676,23 +676,23 @@ func (s *SQLiteStorage) HealthCheck(ctx context.Context) models.HealthStatus {
 		status.Details["query"] = fmt.Sprintf("count query failed: %v", err)
 		return status
 	}
-	
+
 	status.Details["database"] = "connected"
 	status.Details["log_count"] = fmt.Sprintf("%d", count)
-	
+
 	return status
 }
 
 // Close closes the storage connection
 func (s *SQLiteStorage) Close() error {
 	var err error
-	
+
 	if s.search != nil {
 		if searchErr := s.search.Close(); searchErr != nil {
 			err = fmt.Errorf("failed to close search service: %w", searchErr)
 		}
 	}
-	
+
 	if s.db != nil {
 		if dbErr := s.db.Close(); dbErr != nil {
 			if err != nil {
@@ -702,6 +702,6 @@ func (s *SQLiteStorage) Close() error {
 			}
 		}
 	}
-	
+
 	return err
 }

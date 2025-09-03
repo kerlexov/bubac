@@ -3,7 +3,7 @@ package health
 import (
 	"time"
 
-	"github.com/your-org/mcp-logging-server/pkg/models"
+	"github.com/kerlexov/mcp-logging-server/pkg/models"
 )
 
 // CheckSystem performs a system health check

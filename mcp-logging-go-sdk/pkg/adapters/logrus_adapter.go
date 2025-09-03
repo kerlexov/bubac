@@ -3,8 +3,8 @@ package adapters
 import (
 	"fmt"
 
+	"github.com/kerlexov/mcp-logging-go-sdk/pkg/logger"
 	"github.com/sirupsen/logrus"
-	"github.com/your-org/mcp-logging-go-sdk/pkg/logger"
 )
 
 type LogrusHook struct {
