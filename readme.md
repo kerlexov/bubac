@@ -9,7 +9,10 @@ The MCP Logging System consists of:
 1. **Centralized Log Server** - High-performance server for log ingestion and storage
 2. **MCP Server Interface** - MCP-compliant server exposing log retrieval tools
 3. **Go SDK** - Native Go logging library with automatic forwarding
-4. **Multi-Platform SDKs** - Planned SDKs for Swift, Express.js, React, React Native, and Kotlin
+4. **Swift SDK** - Multi-platform iOS/macOS logging with crash reporting
+5. **Express.js SDK** - Node.js/Express middleware with Winston/Bunyan integration
+6. **React SDK** - React hooks and components with browser event tracking
+7. **Additional SDKs** - Planned for React Native and Kotlin (Android)
 
 ## Quick Start
 
@@ -370,12 +373,76 @@ The logs will include:
 - Error messages and stack traces
 - Execution time and context
 
-### 4. Using the Go SDK in Your Applications
+### 4. Using SDKs in Your Applications
 
-#### Installation
+Choose the appropriate SDK based on your platform and framework:
 
+#### Go Applications
 ```bash
-go get github.com/kerlexov/mcp-logging-go-sdk
+go get github.com/your-org/mcp-logging-go-sdk
+```
+
+```go
+import "github.com/your-org/mcp-logging-go-sdk/pkg/logger"
+
+config := logger.DefaultConfig()
+config.ServiceName = "my-go-app"
+config.AgentID = "app-instance-001"
+config.ServerURL = "http://localhost:8080"
+
+mcpLogger, _ := logger.New(config)
+mcpLogger.Info("Application started")
+```
+
+#### Swift/iOS Applications
+```swift
+import MCPLogging
+
+let config = try LoggerConfig.development(
+    serviceName: "my-ios-app",
+    agentID: "device-\(UIDevice.current.identifierForVendor?.uuidString ?? "unknown")"
+)
+
+let logger = try MCPLogging.configure(with: config)
+logger.start()
+logger.info("Application started")
+```
+
+#### Express.js Applications
+```bash
+npm install @your-org/mcp-logging-express
+```
+
+```javascript
+const mcpLogger = require('@your-org/mcp-logging-express');
+
+// Middleware usage
+app.use(mcpLogger.middleware({
+    serverUrl: 'http://localhost:8080',
+    serviceName: 'my-api',
+    agentId: 'api-001'
+}));
+
+// Direct logging
+mcpLogger.info('User authenticated', { userId: '123' });
+```
+
+#### React Applications
+```bash
+npm install @your-org/mcp-logging-react
+```
+
+```javascript
+import { useMCPLogger, MCPLoggerProvider } from '@your-org/mcp-logging-react';
+
+// Provider setup
+<MCPLoggerProvider config={loggerConfig}>
+    <App />
+</MCPLoggerProvider>
+
+// Hook usage
+const logger = useMCPLogger();
+logger.info('Component mounted', { component: 'UserProfile' });
 ```
 
 #### Basic Usage
@@ -420,8 +487,10 @@ Once everything is set up, you can ask Claude to help with log analysis:
 **Example Queries:**
 
 - "Show me all error logs from the last hour for the user-service"
-- "What were the most recent DEBUG logs from opencode?"
-- "Find logs containing 'database connection' from yesterday"
+- "What were the most recent DEBUG logs from my iOS app?"
+- "Find logs containing 'database connection' from my Express API"
+- "Show me crash reports from the React application"
+- "Find performance issues in my Go microservice"
 - "Show me the health status of all logging services"
 - "List all services that have sent logs today"
 
@@ -538,12 +607,61 @@ curl -X POST http://localhost:8081/mcp/query_logs \
   -d '{"service_name":"test","limit":10}'
 ```
 
+## SDK Documentation
+
+Comprehensive documentation for all available SDKs:
+
+### Go SDK
+- **[Go SDK Documentation](./mcp-logging-go-sdk/README.md)** - Complete guide for integrating the Go logging SDK
+- **Features**: Structured logging, buffering, retry logic, circuit breaker, adapters for popular Go logging libraries
+- **Platforms**: Linux, macOS, Windows
+- **Installation**: `go get github.com/your-org/mcp-logging-go-sdk`
+
+### Swift SDK
+- **[Swift SDK Documentation](./mcp-logging-swift-sdk/README.md)** - Complete guide for integrating the Swift logging SDK
+- **Features**: Multi-platform support, device information collection, crash reporting, background processing, network monitoring
+- **Platforms**: iOS 12+, macOS 10.14+, watchOS 5+, tvOS 12+
+- **Installation**: Swift Package Manager
+
+### Express.js SDK
+- **[Express.js SDK Documentation](./mcp-logging-express-sdk/README.md)** - Complete guide for integrating the Express.js logging SDK
+- **Features**: Express middleware, HTTP request/response logging, Winston/Bunyan adapters, high-throughput buffering
+- **Platforms**: Node.js 14+, Linux, macOS, Windows
+- **Installation**: `npm install @your-org/mcp-logging-express`
+
+### React SDK
+- **[React SDK Documentation](./mcp-logging-react-sdk/README.md)** - Complete guide for integrating the React logging SDK
+- **Features**: React hooks, error boundaries, browser console capture, performance monitoring, user interaction tracking
+- **Platforms**: Web browsers, React Native (planned)
+- **Installation**: `npm install @your-org/mcp-logging-react`
+
+### SDK Comparison
+
+| Feature | Go SDK | Swift SDK | Express.js SDK | React SDK |
+|---------|--------|-----------|----------------|-----------|
+| **Platform Support** | Linux, macOS, Windows | iOS, macOS, watchOS, tvOS | Node.js, Linux, macOS, Windows | Web browsers |
+| **Buffering** | ✅ Memory buffer with rotation | ✅ Memory buffer with rotation | ✅ High-throughput buffer | ✅ Memory buffer |
+| **Retry Logic** | ✅ Exponential backoff | ✅ Exponential backoff | ✅ Exponential backoff | ✅ Exponential backoff |
+| **Circuit Breaker** | ✅ Configurable thresholds | ✅ Configurable thresholds | ✅ Configurable thresholds | ✅ Configurable thresholds |
+| **Crash Reporting** | ❌ | ✅ Automatic crash capture | ❌ | ✅ Error boundary integration |
+| **System Integration** | ✅ OSLog, logrus, zap adapters | ✅ OSLog, system logging | ✅ Winston, Bunyan adapters | ✅ Browser console, performance API |
+| **Network Monitoring** | ❌ | ✅ Reachability monitoring | ❌ | ✅ Network status detection |
+| **Background Processing** | ❌ | ✅ iOS background tasks | ❌ | ❌ |
+| **HTTP Request Logging** | ❌ | ❌ | ✅ Express middleware | ❌ |
+| **Browser Event Tracking** | ❌ | ❌ | ❌ | ✅ User interactions, performance |
+| **Framework Integration** | ❌ | ❌ | ✅ Express.js | ✅ React hooks/components |
+| **Error Boundaries** | ❌ | ❌ | ❌ | ✅ React error boundaries |
+| **Performance Monitoring** | ❌ | ❌ | ❌ | ✅ Page load, render times |
+
 ## Contributing
 
 See individual component directories for development setup:
 
 - [MCP Server Development](./mcp-logging-server/README.md)
 - [Go SDK Development](./mcp-logging-go-sdk/README.md)
+- [Swift SDK Development](./mcp-logging-swift-sdk/README.md)
+- [Express.js SDK Development](./mcp-logging-express-sdk/README.md)
+- [React SDK Development](./mcp-logging-react-sdk/README.md)
 
 ## License
 
