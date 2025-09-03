@@ -1,19 +1,24 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-bookworm AS builder
 
-# Install build dependencies and security updates
-RUN apk update && apk add --no-cache \
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
     gcc \
-    musl-dev \
-    sqlite-dev \
+    libc6-dev \
+    libsqlite3-dev \
     ca-certificates \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/lib/apt/lists/*
+
+# Set CGO environment
+ENV CGO_ENABLED=1
+ENV GOOS=linux
+ENV GOARCH=arm64
 
 WORKDIR /app
 
 # Create non-root user for build
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
+RUN groupadd -g 1001 appgroup && \
+    useradd -u 1001 -g appgroup -s /bin/bash -m appuser
 
 # Copy go mod files first for better caching
 COPY go.mod go.sum ./
@@ -30,19 +35,19 @@ RUN CGO_ENABLED=1 GOOS=linux go build \
     cmd/server/main.go
 
 # Runtime stage
-FROM alpine:latest
+FROM debian:bookworm-slim
 
-# Install runtime dependencies and security updates
-RUN apk update && apk add --no-cache \
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
     ca-certificates \
-    sqlite \
+    sqlite3 \
     tzdata \
-    && rm -rf /var/cache/apk/* \
+    && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates
 
 # Create non-root user
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
+RUN groupadd -g 1001 appgroup && \
+    useradd -u 1001 -g appgroup -s /bin/bash -m appuser
 
 # Create application directory
 WORKDIR /app

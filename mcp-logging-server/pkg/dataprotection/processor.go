@@ -106,7 +106,6 @@ func (p *DataProtectionProcessor) ProcessLogEntry(entry *models.LogEntry) error 
 		return nil
 	}
 
-	originalEntry := *entry // Copy for audit
 	actionsPerformed := make([]AuditAction, 0)
 
 	// Process metadata fields
