@@ -17,7 +17,6 @@ RUN addgroup -g 1001 -S appgroup && \
 
 # Copy go mod files first for better caching
 COPY go.mod go.sum ./
-RUN go mod download && go mod verify
 
 # Copy source code
 COPY . .
