@@ -50,69 +50,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    
-    networks:
-      - mcp-logging-network
-    
-    security_opt:
-      - no-new-privileges:true
-    
-    read_only: true
-    tmpfs:
-      - /tmp:noexec,nosuid,size=100m
-    
-    labels:
-      # Coolify labels for automatic configuration
-      - "coolify.managed=true"
-      - "coolify.version=4.0"
-      - "coolify.type=application"
-      
-      # Traefik labels for routing (Coolify uses Traefik)
-      - "traefik.enable=true"
-      
-      # Log ingestion API routing
-      - "traefik.http.routers.mcp-logging-api.rule=Host(`${API_DOMAIN}`) && (PathPrefix(`/v1/`) || PathPrefix(`/health`) || PathPrefix(`/metrics`))"
-      - "traefik.http.routers.mcp-logging-api.entrypoints=websecure"
-      - "traefik.http.routers.mcp-logging-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.mcp-logging-api.service=mcp-logging-api"
-      - "traefik.http.services.mcp-logging-api.loadbalancer.server.port=8080"
-      
-      # MCP server routing
-      - "traefik.http.routers.mcp-logging-mcp.rule=Host(`${MCP_DOMAIN}`) && PathPrefix(`/mcp`)"
-      - "traefik.http.routers.mcp-logging-mcp.entrypoints=websecure"
-      - "traefik.http.routers.mcp-logging-mcp.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.mcp-logging-mcp.service=mcp-logging-mcp"
-      - "traefik.http.services.mcp-logging-mcp.loadbalancer.server.port=8081"
-      
-      # Security headers middleware
-      - "traefik.http.middlewares.mcp-security-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
-      - "traefik.http.middlewares.mcp-security-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
-      - "traefik.http.middlewares.mcp-security-headers.headers.customresponseheaders.X-Frame-Options=DENY"
-      - "traefik.http.middlewares.mcp-security-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
-      - "traefik.http.middlewares.mcp-security-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains"
-      - "traefik.http.middlewares.mcp-security-headers.headers.customresponseheaders.Content-Security-Policy=default-src 'self'"
-      - "traefik.http.middlewares.mcp-security-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
-      
-      # Apply security headers to both routers
-      - "traefik.http.routers.mcp-logging-api.middlewares=mcp-security-headers"
-      - "traefik.http.routers.mcp-logging-mcp.middlewares=mcp-security-headers"
-      
-      # Rate limiting middleware (optional, can be handled by application)
-      - "traefik.http.middlewares.mcp-rate-limit.ratelimit.average=100"
-      - "traefik.http.middlewares.mcp-rate-limit.ratelimit.burst=200"
-      
-      # Health check configuration
-      - "coolify.healthcheck.enabled=true"
-      - "coolify.healthcheck.path=/health"
-      - "coolify.healthcheck.port=8080"
-      - "coolify.healthcheck.interval=30s"
-      - "coolify.healthcheck.timeout=10s"
-      - "coolify.healthcheck.retries=3"
-
-networks:
-  mcp-logging-network:
-    driver: bridge
-    external: false
 
 volumes:
   mcp_logging_data:
