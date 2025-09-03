@@ -1,6 +1,10 @@
 # Build stage
 FROM golang:1.23-bookworm AS builder
 
+# Build arguments for cross-platform support
+ARG TARGETARCH=amd64
+ARG TARGETOS=linux
+
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -9,10 +13,18 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Set CGO environment
+# Set CGO environment for cross-platform compatibility
+# Uses build arguments for flexible architecture support
 ENV CGO_ENABLED=1
-ENV GOOS=linux
-ENV GOARCH=arm64
+ENV GOOS=$TARGETOS
+ENV GOARCH=$TARGETARCH
+
+# Ensure GCC can handle the target architecture
+ENV CC=gcc
+ENV CXX=g++
+
+# Add debugging info
+RUN echo "Building for OS: $GOOS, Architecture: $GOARCH"
 
 WORKDIR /app
 
